@@ -118,6 +118,8 @@ class InteractionDataLayer : public BasePrefetchingInteractionDataLayer<Dtype> {
  protected:
   virtual void InternalThreadEntry();
 
+  int inact_total_size;
+
   // LEVELDB
   shared_ptr<leveldb::DB> db_;
   shared_ptr<leveldb::Iterator> iter_;

@@ -1,4 +1,7 @@
+// This class assume all datumn in leveldb have the same size,  so is the mean.
+// May cause error easily.
 #include <string>
+#include <iostream>
 
 #include "caffe/data_transformer.hpp"
 #include "caffe/util/math_functions.hpp"
@@ -27,6 +30,8 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
   }
 
   if (crop_size) {
+    // std::cout << "crop_size" << "\tchannels:" << channels << "\theight:" << height << "\twidth:" << width << "\tsize:" << size << std::endl;
+    CHECK_GE(std::min(height,width), crop_size) << "\theight:" << height << "\twidth:" << width << " is smaller than cropsize " << crop_size;
     CHECK(data.size()) << "Image cropping only support uint8 data";
     int h_off, w_off;
     // We only do random crop when we do training.

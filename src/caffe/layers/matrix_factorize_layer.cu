@@ -16,7 +16,7 @@ void MatrixFactorizeLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom
     return Forward_cpu(bottom, top);
   }
 
-  LOG(INFO) << "Forward_gpu";
+  // LOG(INFO) << "Forward_gpu";
   const Dtype* user_feature = this->blobs_[0]->gpu_data();
   const Dtype* item_feature = bottom[0]->gpu_data();
   const Dtype* itact_data_ = bottom[1]->cpu_data();				// must use cpu
@@ -32,12 +32,12 @@ void MatrixFactorizeLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom
   for (int itemid = 0; itemid < itact_item_; ++itemid ) {
     item_offset = itact_count_[itemid*2];
     rating_size = itact_count_[itemid*2+1];
-    LOG(INFO) << "itemid:" << itemid << " offset:" << item_offset << " rating_size: " << rating_size;
+    // LOG(INFO) << "itemid:" << itemid << " offset:" << item_offset << " rating_size: " << rating_size;
     for (int rating_cnt = 0; rating_cnt < rating_size; ++rating_cnt) {
       rating_idx = item_offset + rating_cnt;
       userid = static_cast<int>(itact_data_[rating_idx*2+1]);
       caffe_copy(num_latent_, user_feature + userid*num_latent_, user_feature_buf + rating_cnt*num_latent_);
-      LOG(INFO) << "itemid:" << itemid << " userid:" << userid;
+      // LOG(INFO) << "itemid:" << itemid << " userid:" << userid;
     }
     caffe_gpu_gemv(CblasNoTrans, rating_size, num_latent_,
       Dtype(1.0), user_feature_buf, item_feature + itemid*num_latent_, Dtype(0.),
@@ -51,13 +51,13 @@ void MatrixFactorizeLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom
     int extra_length = max_rating_size_ - num_rating_;
     caffe_gpu_set(extra_length, Dtype(0.), itact_pred_ + num_rating_);
   }
-  // checking prediction
-  const Dtype* itact_pred_cpu_ = (*top)[0]->cpu_data();
-  LOG(INFO) << "Rating prediction after adding bias " << global_bias[0];
-  for (int j = 0; j < num_rating_; j++) {
-    std::cout << itact_pred_cpu_[j] << "\t";
-  } 
-  std::cout << std::endl;
+  // // checking prediction
+  // const Dtype* itact_pred_cpu_ = (*top)[0]->cpu_data();
+  // LOG(INFO) << "Rating prediction after adding bias " << global_bias[0];
+  // for (int j = 0; j < num_rating_; j++) {
+  //   std::cout << itact_pred_cpu_[j] << "\t";
+  // } 
+  // std::cout << std::endl;
 }
 
 template <typename Dtype>
@@ -68,7 +68,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     return Backward_cpu(top, propagate_down, bottom);
   }
   
-  LOG(INFO) << "Backward_gpu";
+  // LOG(INFO) << "Backward_gpu";
 
   // // checking loss
   // const Dtype* rating_diff = top[0]->cpu_diff();
@@ -95,7 +95,7 @@ template <typename Dtype>
 void MatrixFactorizeLayer<Dtype>::Backward_User_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
 	// return Backward_User_cpu(top, propagate_down, bottom);
-  LOG(INFO) << "Backward_User_gpu";
+  // LOG(INFO) << "Backward_User_gpu";
   // bp diff to user feature in blob_[0]
   if (this->param_propagate_down_[0]) {
     const Dtype* rating_diff = top[0]->cpu_diff();  // must be cpu
@@ -156,7 +156,7 @@ template <typename Dtype>
 void MatrixFactorizeLayer<Dtype>::Backward_Item_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
 	// return Backward_Item_cpu(top, propagate_down, bottom);
-  LOG(INFO) << "Backward_Item_gpu";
+  // LOG(INFO) << "Backward_Item_gpu";
   // bp diff to item feature in bottom[0]
   if (propagate_down[0]) {
     // LOG(INFO) << "Backward_Item_gpu begin";

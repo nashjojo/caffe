@@ -82,6 +82,7 @@ void BasePrefetchingInteractionDataLayer<Dtype>::JoinPrefetchThread() {
 template <typename Dtype>
 void BasePrefetchingInteractionDataLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
+  // LOG(INFO) << "Forward_cpu";
   // First, join the thread
   JoinPrefetchThread();
   // Copy the data

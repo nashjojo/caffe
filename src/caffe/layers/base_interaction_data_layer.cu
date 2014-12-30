@@ -7,6 +7,7 @@ namespace caffe {
 template <typename Dtype>
 void BasePrefetchingInteractionDataLayer<Dtype>::Forward_gpu(
     const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
+  // LOG(INFO) << "Forward_gpu";
   // First, join the thread
   JoinPrefetchThread();
   // Copy the data

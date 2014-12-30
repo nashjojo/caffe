@@ -83,7 +83,7 @@ void MatrixFactorizeLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 template <typename Dtype>
 void MatrixFactorizeLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top) {
-  LOG(INFO) << "MatrixFactorizeLayer<Dtype>::Reshape";
+  // LOG(INFO) << "MatrixFactorizeLayer<Dtype>::Reshape";
   CHECK_EQ(bottom[0]->count() / bottom[0]->num(), num_latent_) << "Input item latent factor dimension "
     "incompatible with inner user latent factor dimension.";
   CHECK_EQ(bottom[0]->num(), bottom[2]->num()) << "Input item number not equal to "
@@ -165,7 +165,7 @@ void MatrixFactorizeLayer<Dtype>::Build_map(const vector<Blob<Dtype>*>& bottom) 
         // for (int i = 0; i < temp.size(); i++) {
         //   LOG(INFO) << i << " " << temp[i];
         // }
-        temp.push_back(rating_idx);
+        temp.push_back(rating_idx); // duplicated <itemid,userid> will not cause error.
         user2itemid[userid] = temp;
       }
     }
@@ -197,7 +197,7 @@ void MatrixFactorizeLayer<Dtype>::Build_map(const vector<Blob<Dtype>*>& bottom) 
 template <typename Dtype>
 void MatrixFactorizeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
-  LOG(INFO) << "Forward_cpu";
+  // LOG(INFO) << "Forward_cpu";
   const Dtype* user_feature = this->blobs_[0]->cpu_data();
   const Dtype* item_feature = bottom[0]->cpu_data();
   const Dtype* itact_data_ = bottom[1]->cpu_data();
@@ -213,12 +213,12 @@ void MatrixFactorizeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
   for (int itemid = 0; itemid < itact_item_; ++itemid ) {
     item_offset = itact_count_[itemid*2];
     rating_size = itact_count_[itemid*2+1];
-    LOG(INFO) << "itemid:" << itemid << " offset:" << item_offset << " rating_size: " << rating_size;
+    // LOG(INFO) << "itemid:" << itemid << " offset:" << item_offset << " rating_size: " << rating_size;
     for (int rating_cnt = 0; rating_cnt < rating_size; ++rating_cnt) {
       rating_idx = item_offset + rating_cnt;
       userid = static_cast<int>(itact_data_[rating_idx*2+1]);
       caffe_copy(num_latent_, user_feature + userid*num_latent_, user_feature_buf + rating_cnt*num_latent_);
-      LOG(INFO) << "itemid:" << itemid << " userid:" << userid;
+      // LOG(INFO) << "itemid:" << itemid << " userid:" << userid;
     }
 
     // checking user_feature_buf
@@ -256,12 +256,12 @@ void MatrixFactorizeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
     int extra_length = max_rating_size_ - num_rating_;
     caffe_set(extra_length, Dtype(0.), itact_pred_ + num_rating_);
   }
-  // checking prediction
-  LOG(INFO) << "Rating prediction after adding bias " << global_bias[0];
-  for (int j = 0; j < num_rating_; j++) {
-    std::cout << itact_pred_[j] << "\t";
-  } 
-  std::cout << std::endl;
+  // // checking prediction
+  // LOG(INFO) << "Rating prediction after adding bias " << global_bias[0];
+  // for (int j = 0; j < num_rating_; j++) {
+  //   std::cout << itact_pred_[j] << "\t";
+  // } 
+  // std::cout << std::endl;
 }
 
 /*  given error for each <itemid, userid, error>
@@ -276,7 +276,7 @@ template <typename Dtype>
 void MatrixFactorizeLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down,
     vector<Blob<Dtype>*>* bottom) {
-  LOG(INFO) << "Backward_cpu";
+  // LOG(INFO) << "Backward_cpu";
 
   // // checking loss
   // const Dtype* rating_diff = top[0]->cpu_diff();
@@ -307,7 +307,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 template <typename Dtype>
 void MatrixFactorizeLayer<Dtype>::Backward_User_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
-  LOG(INFO) << "Backward_User_cpu";
+  // LOG(INFO) << "Backward_User_cpu";
   // bp diff to user feature in blob_[0]
   if (this->param_propagate_down_[0]) {
     const Dtype* rating_diff = top[0]->cpu_diff();
@@ -373,7 +373,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_User_cpu(const vector<Blob<Dtype>*>& 
 template <typename Dtype>
 void MatrixFactorizeLayer<Dtype>::Backward_Item_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
-  LOG(INFO) << "Backward_Item_cpu";
+  // LOG(INFO) << "Backward_Item_cpu";
   // bp diff to item feature in bottom[0]
   if (propagate_down[0]) {
     // LOG(INFO) << "Backward_Item_cpu begin";

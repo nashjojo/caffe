@@ -35,6 +35,7 @@ InteractionDataLayer<Dtype>::~InteractionDataLayer<Dtype>() {
 template <typename Dtype>
 void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top) {
+  LOG(INFO) << "DataLayerSetUp";
   // Initialize DB
   switch (this->layer_param_.data_param().backend()) {
   case DataParameter_DB_LEVELDB:
@@ -137,7 +138,7 @@ void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bot
   }
 
   // interaction_data have variable lenth, maybe we just use max length?
-  int inact_total_size = this->layer_param_.data_param().batch_size() * this->layer_param_.data_param().itact_size();
+  inact_total_size = this->layer_param_.data_param().batch_size() * this->layer_param_.data_param().itact_size();
   // LOG(INFO) << "setting up prefetches_data/label batch_size*itact_size " << this->layer_param_.data_param().batch_size()<<"*"<<this->layer_param_.data_param().itact_size();
 
   (*top)[2]->Reshape(
@@ -160,6 +161,7 @@ void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bot
 // This function is used to create a thread that prefetches the data.
 template <typename Dtype>
 void InteractionDataLayer<Dtype>::InternalThreadEntry() {
+  // LOG(INFO) << "InternalThreadEntry";
   DatumInteraction datumItract;
   Datum datum;
   CHECK(this->prefetch_data_.count());
@@ -178,6 +180,7 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
   int itact_offset = 0;
 
   for (int item_id = 0; item_id < batch_size; ++item_id) {
+    // std::cout << "processing itemid:" << item_id << std::endl; 
     // get a blob
     switch (this->layer_param_.data_param().backend()) {
     case DataParameter_DB_LEVELDB:
@@ -196,7 +199,6 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
     }
 
     datum = datumItract.datum();
-
     // Apply data transformations (mirror, scale, crop...)
     this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
 
@@ -204,7 +206,6 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
       top_label[item_id] = datum.label();
     }
 
-    // [Todo: changed this into fixed offset implementation]
     // adding interaction datatype
     CHECK_EQ(datumItract.userid_size(), datumItract.itemid_size()) << "userid and itemid have different length";
     CHECK_EQ(datumItract.userid_size(), datumItract.rating_size()) << "userid and rating have different length";
@@ -212,14 +213,14 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
 
     top_itact_count[item_id*2] = itact_offset;
     top_itact_count[item_id*2 + 1] = datumItract.userid_size();
-    // LOG(INFO) << "offset:" << itact_offset << " rating_size: " << datumItract.userid_size();
+    // LOG(INFO) << "itemid: "<<item_id<<" offset:" << itact_offset << " rating_size: " << datumItract.userid_size();
     // setting interaction data
-    for (int itact_id = 0; itact_id < datumItract.userid_size() && itact_offset+itact_id < this->prefetch_itact_label_.num(); ++itact_id) {
+    for (int itact_id = 0; itact_id < datumItract.userid_size() && itact_offset+itact_id < inact_total_size; ++itact_id) {
       top_data_itact[(itact_offset + itact_id)*2] = datumItract.itemid(itact_id);
       top_data_itact[(itact_offset + itact_id)*2 + 1] = datumItract.userid(itact_id);
       top_label_itact[itact_offset + itact_id] = datumItract.rating(itact_id);
       // LOG(INFO) << "itemid:" << datumItract.itemid(itact_id) << " userid:" << datumItract.userid(itact_id)
-      //   << " rating:" << datumItract.rating(itact_id);
+        // << " rating:" << datumItract.rating(itact_id);
     }
     itact_offset += datumItract.userid_size(); // WARNING! ERROR! incase only part of the rating is used. Line 211 ensure this is safe.
 
