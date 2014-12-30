@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map> // for MatrixFactorizeLayer
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
@@ -276,11 +277,83 @@ class InnerProductLayer : public Layer<Dtype> {
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
 
-  int M_;
-  int K_;
-  int N_;
+  int M_; // input number of instance, bottom[0]->num();
+  int K_; // input data dimension
+  int N_; // num_output
   bool bias_term_;
   Blob<Dtype> bias_multiplier_;
+};
+
+/**
+ * @brief Matrix factorization layer, computes an inner product
+ *        with a set of learned weights, and (optionally) adds biases.
+ *        bottom[0]: V
+ *        bottom[1]: itact_data
+ *        bottom[2]: itact_count
+ *
+ *        top[0]: itact_label_pred
+ *
+ * TODO(dox): thorough documentation for Forward, Backward, and proto params.
+ */
+template <typename Dtype>
+class MatrixFactorizeLayer : public Layer<Dtype> {
+ public:
+  explicit MatrixFactorizeLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_MATRIX_FACT;
+  }
+  virtual inline int ExactNumBottomBlobs() const { return 3; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+
+  bool force_cpu_;
+  bool bias_term_; 
+  int num_user_;   // total number of user
+  int num_latent_; // input data dimension
+  int itact_size_; // MAX number of users for each item, in a batch
+
+  Blob<Dtype> bias_multiplier_; 
+  Blob<Dtype> user_feature_buffer_; // 
+  Blob<Dtype> item_feature_buffer_; // 
+  Blob<Dtype> rating_buffer_; 
+  // this->blobs_[0] : user latent feature 
+  // this->blobs_[1] : global bias
+
+  int itact_item_; // MAX number of item for each user, batch size may change!
+  int max_rating_size_; // MAX input number of rating, bottom[0]->num(); vary each time
+  int num_rating_; // actual number of instance, bottom[0]->num(); vary each time
+
+  // hold corresponding itemid, for each userid
+  map<int, vector<int> > user2itemid;
+  // hold a itemid to relative itemid map here.
+  map<int, int> itemid2relative_id;
+
+ private:
+  // building map item2userid and user2itemid
+  void Build_map(const vector<Blob<Dtype>*>& bottom);
+  void Backward_User_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  void Backward_User_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  void Backward_Item_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  void Backward_Item_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
 };
 
 /**
