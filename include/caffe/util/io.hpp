@@ -102,6 +102,9 @@ inline bool ReadImageToDatum(const string& filename, const int label,
   return ReadImageToDatum(filename, label, 0, 0, datum);
 }
 
+bool ReadImageToDatumWithSameAspectRatio(const string& filename, const int label,
+    const int height, const int width, const bool is_color, Datum* datum);
+
 leveldb::Options GetLevelDBOptions();
 
 template <typename Dtype>

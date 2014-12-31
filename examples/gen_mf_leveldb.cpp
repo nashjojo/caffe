@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
 			img_name = ss.str();
 			// img_name = image_folder + "/" + string(itemid) + ".jpg";
 			// resize all image to SIZE*SIZE
-			if (!ReadImageToDatum(img_name, category_id, SIZE, SIZE, datum)) {
+			if (!ReadImageToDatumWithSameAspectRatio(img_name, category_id, SIZE, SIZE, true, datum)) {
 				std::cout << img_name << " is broken" << std::endl;
 				continue;
 			}

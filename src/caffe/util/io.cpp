@@ -13,6 +13,7 @@
 #include <fstream>  // NOLINT(readability/streams)
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "caffe/common.hpp"
 #include "caffe/proto/caffe.pb.h"
@@ -79,6 +80,79 @@ bool ReadImageToDatum(const string& filename, const int label,
   }
   if (height > 0 && width > 0) {
     cv::resize(cv_img_origin, cv_img, cv::Size(height, width));
+  } else {
+    cv_img = cv_img_origin;
+  }
+
+  int num_channels = (is_color ? 3 : 1);
+  datum->set_channels(num_channels);
+  datum->set_height(cv_img.rows);
+  datum->set_width(cv_img.cols);
+  datum->set_label(label);
+  datum->clear_data();
+  datum->clear_float_data();
+  string* datum_string = datum->mutable_data();
+  if (is_color) {
+    for (int c = 0; c < num_channels; ++c) {
+      for (int h = 0; h < cv_img.rows; ++h) {
+        for (int w = 0; w < cv_img.cols; ++w) {
+          datum_string->push_back(
+            static_cast<char>(cv_img.at<cv::Vec3b>(h, w)[c]));
+        }
+      }
+    }
+  } else {  // Faster than repeatedly testing is_color for each pixel w/i loop
+    for (int h = 0; h < cv_img.rows; ++h) {
+      for (int w = 0; w < cv_img.cols; ++w) {
+        datum_string->push_back(
+          static_cast<char>(cv_img.at<uchar>(h, w)));
+        }
+      }
+  }
+  return true;
+}
+
+bool ReadImageToDatumWithSameAspectRatio(const string& filename, const int label,
+    const int height, const int width, const bool is_color, Datum* datum) {
+  cv::Mat cv_img, cv_img_temp;
+  int cv_read_flag = (is_color ? CV_LOAD_IMAGE_COLOR :
+    CV_LOAD_IMAGE_GRAYSCALE);
+
+  cv::Mat cv_img_origin = cv::imread(filename, cv_read_flag);
+  if (!cv_img_origin.data) {
+    LOG(ERROR) << "Could not open or find file " << filename;
+    return false;
+  }
+  // std::cout << "cv_img_origin " << cv_img_origin.rows << "*" << cv_img_origin.cols << std::endl;
+  if (height > 0 && width > 0) {
+    // make sure 1. Same aspect ratio 2.short side is exactly that size 3.crop exactly the same size
+    if (cv_img_origin.rows != height && (cv_img_origin.rows*1.0/cv_img_origin.cols <= height*1.0/width)) {
+      float ratio = (1.0*height)/cv_img_origin.rows;
+      int width_temp = int(ratio*cv_img_origin.cols);
+      cv::resize(cv_img_origin, cv_img_temp, cv::Size(height, width_temp));
+      cv_img_temp.copyTo(cv_img_origin);
+      // std::cout << "image resized heights to " << cv_img_origin.rows << "*" << cv_img_origin.cols << std::endl;
+    } 
+    if (cv_img_origin.cols != width && (cv_img_origin.rows*1.0/cv_img_origin.cols > height*1.0/width)) {
+      float ratio = (1.0*width)/cv_img_origin.cols;
+      int height_temp = int(ratio*cv_img_origin.rows);
+      cv::resize(cv_img_origin, cv_img_temp, cv::Size(height_temp, width));
+      cv_img_temp.copyTo(cv_img_origin);
+      // std::cout << "image resized width to " << cv_img_origin.rows << "*" << cv_img_origin.cols << std::endl;
+    }
+    // croping center crop
+    
+    if (cv_img_origin.rows>height || cv_img_origin.cols>width) {
+      int start_x = (cv_img_origin.cols - width) / 2;
+      int start_y = (cv_img_origin.rows - height) / 2;
+      cv::Rect roi(start_x, start_y, width, height);
+      cv_img_origin(roi).copyTo(cv_img);
+      // std::cout << "image crop to " << cv_img.rows << "*" << cv_img.cols << std::endl;
+    } else {
+      cv_img = cv_img_origin;
+    }
+    CHECK_EQ(cv_img.rows, height) << "image heights has wrong height." << cv_img.rows << "*" << cv_img.cols;
+    CHECK_EQ(cv_img.cols, height) << "image heights has wrong height." << cv_img.rows << "*" << cv_img.cols;
   } else {
     cv_img = cv_img_origin;
   }
