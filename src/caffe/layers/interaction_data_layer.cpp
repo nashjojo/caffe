@@ -199,6 +199,7 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
     }
 
     datum = datumItract.datum();
+    // LOG(INFO) << "this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);";
     // Apply data transformations (mirror, scale, crop...)
     this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
 

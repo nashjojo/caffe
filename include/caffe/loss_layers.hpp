@@ -85,6 +85,42 @@ class AccuracyLayer : public Layer<Dtype> {
 };
 
 /**
+ * @brief Dump bottom blob into a file.
+ */
+template <typename Dtype>
+class DumpLayer : public Layer<Dtype> {
+ public:
+  explicit DumpLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top){};
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_DUMP;
+  }
+
+  virtual inline int ExactNumBottomBlobs() const { return 3; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  /// @brief Not implemented -- DumpLayer cannot be used as a loss.
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
+    for (int i = 0; i < propagate_down.size(); ++i) {
+      if (propagate_down[i]) { NOT_IMPLEMENTED; }
+    }
+  }
+
+  int itact_item_;
+  int num_rating_; // actual number of instance, bottom[0]->num(); vary each time
+};
+
+
+/**
  * @brief An interface for Layer%s that take two Blob%s as input -- usually
  *        (1) predictions and (2) ground-truth labels -- and output a
  *        singleton Blob representing the loss.

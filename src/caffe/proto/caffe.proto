@@ -273,6 +273,7 @@ message LayerParameter {
     // adding interaction data layer
     DATA_ITACT = 50;  // DataParameter
     MATRIX_FACT = 51; // MatrixFactorizeParameter
+    DUMP = 52;  // DumpLayer
   }
   optional LayerType type = 5; // the layer type from the enum above
 
@@ -329,6 +330,7 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 25;
   optional WindowDataParameter window_data_param = 20;
   optional MatrixFactorizeParameter matrix_fact_param = 50; // added for MATRIX_FACT
+  optional DumpParameter dump_param = 52;  // added for dump_layer
 
   // Parameters for data pre-processing.
   optional TransformationParameter transform_param = 36;
@@ -561,6 +563,11 @@ message MatrixFactorizeParameter {
   optional uint32 num_user = 5 [default = 0];   // MAX userid
   optional uint32 itact_size = 6 [default = 0]; // MAX number of interaction for each item
   optional bool force_cpu = 7 [default = false]; // force to use gpu?
+}
+
+// Message that stores parameters used by DumpLayer
+message DumpParameter {
+  optional string dump_file = 1 [default = "dump_file.txt"];
 }
 
 // Message that stores parameters used by LRNLayer
