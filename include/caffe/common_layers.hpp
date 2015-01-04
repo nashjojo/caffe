@@ -324,19 +324,23 @@ class MatrixFactorizeLayer : public Layer<Dtype> {
   bool force_cpu_;
   bool bias_term_; 
   int num_user_;   // total number of user
+  int num_item_;   // total number of item
   int num_latent_; // input data dimension
   int itact_size_; // MAX number of users for each item, in a batch
 
   Blob<Dtype> bias_multiplier_; 
   Blob<Dtype> user_feature_buffer_; // 
   Blob<Dtype> item_feature_buffer_; // 
+  Blob<Dtype> item_feature_mixed_; // hold mixed item feature for current batch
   Blob<Dtype> rating_buffer_; 
   // this->blobs_[0] : user latent feature 
-  // this->blobs_[1] : global bias
+  // this->blobs_[1] : item latent feature 
+  // this->blobs_[2] : global bias
 
   int itact_item_; // MAX number of item for each user, batch size may change!
   int max_rating_size_; // MAX input number of rating, bottom[0]->num(); vary each time
   int num_rating_; // actual number of instance, bottom[0]->num(); vary each time
+  bool gen_item_diff_; // mark whether we have computed item feature diff
 
   // hold corresponding itemid, for each userid
   map<int, vector<int> > user2itemid;
@@ -352,7 +356,11 @@ class MatrixFactorizeLayer : public Layer<Dtype> {
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
   void Backward_Item_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  void Backward_Item_img_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
   void Backward_Item_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  void Backward_Item_img_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
 };
 

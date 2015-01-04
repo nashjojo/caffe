@@ -563,6 +563,7 @@ message MatrixFactorizeParameter {
   optional uint32 num_user = 5 [default = 0];   // MAX userid
   optional uint32 itact_size = 6 [default = 0]; // MAX number of interaction for each item
   optional bool force_cpu = 7 [default = false]; // force to use gpu?
+  optional uint32 num_item = 8 [default = 0];   // MAX itemid
 }
 
 // Message that stores parameters used by DumpLayer
