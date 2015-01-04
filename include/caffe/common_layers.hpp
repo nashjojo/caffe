@@ -327,6 +327,8 @@ class MatrixFactorizeLayer : public Layer<Dtype> {
   int num_item_;   // total number of item
   int num_latent_; // input data dimension
   int itact_size_; // MAX number of users for each item, in a batch
+  Dtype img_weight_; // weight for image feature
+  Dtype feature_weight_; // weight for independent item feature
 
   Blob<Dtype> bias_multiplier_; 
   Blob<Dtype> user_feature_buffer_; // 
