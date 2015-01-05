@@ -74,8 +74,8 @@ int main(int argc, char** argv) {
 		// convert to long int
 		str2int(item_id_long, item_name);
 		str2int(itemid, item_id_str);
-		std::cout<< item_name << "\t" << item_id_str << std::endl;
-		std::cout<< item_id_long << "\t" << itemid << std::endl;
+		// std::cout<< item_name << "\t" << item_id_str << std::endl;
+		// std::cout<< item_id_long << "\t" << itemid << std::endl;
 		itemid_mapper[itemid] = item_id_long;
 	}
 	std::cout << "itemid_mapper finished." << std::endl;
@@ -126,8 +126,8 @@ int main(int argc, char** argv) {
 		item_id_long = itemid_mapper[itemid];
 		category_id = item_category_mapper[itemid];
 
-		std::cout << itemid << "\t" << userid << "\t" << click << "\titem_id_long:" << item_id_long
-			<< "\tcategory_id:" << category_id << std::endl;
+		// std::cout << itemid << "\t" << userid << "\t" << click << "\titem_id_long:" << item_id_long
+		// 	<< "\tcategory_id:" << category_id << std::endl;
 
 		// we have itemid, userid, click
 		// if we just started / meet a new itemid / current rating number exceeds maximum
