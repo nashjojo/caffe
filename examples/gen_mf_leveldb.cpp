@@ -74,13 +74,13 @@ int main(int argc, char** argv) {
 		// convert to long int
 		str2int(item_id_long, item_name);
 		str2int(itemid, item_id_str);
-		// std::cout<< item_name << "\t" << item_id_str << std::endl;
-		// std::cout<< item_id_long << "\t" << itemid << std::endl;
+		std::cout<< item_name << "\t" << item_id_str << std::endl;
+		std::cout<< item_id_long << "\t" << itemid << std::endl;
 		itemid_mapper[itemid] = item_id_long;
 	}
 	std::cout << "itemid_mapper finished." << std::endl;
 
-	std::ifstream category_infile(map_item_file.c_str());
+	std::ifstream category_infile(item_category.c_str());
 	while (getline(category_infile,line)) {
 		std::istringstream lineString(line);
 		getline(lineString, item_name,',');
@@ -126,8 +126,8 @@ int main(int argc, char** argv) {
 		item_id_long = itemid_mapper[itemid];
 		category_id = item_category_mapper[itemid];
 
-		// std::cout << itemid << "\t" << userid << "\t" << click << "\titem_id_long:" << item_id_long
-		// 	<< "\tcategory_id:" << category_id << std::endl;
+		std::cout << itemid << "\t" << userid << "\t" << click << "\titem_id_long:" << item_id_long
+			<< "\tcategory_id:" << category_id << std::endl;
 
 		// we have itemid, userid, click
 		// if we just started / meet a new itemid / current rating number exceeds maximum
@@ -182,6 +182,17 @@ int main(int argc, char** argv) {
 		rating_cnt ++;
 	}
 
+	// adding remainint 
+	if (datumItact.rating_size() > 0) {
+		stringstream ss;
+		ss << datum_cnt;
+		db->Put(leveldb::WriteOptions(), ss.str(), datumItact.SerializeAsString());
+		datum_cnt ++;
+		if (datum_cnt%1000==0) {
+			std::cout << "datum number " << datum_cnt << std::endl;
+		}
+	}
+
 	delete db;
 	std::cout << "Finished. Total " << datum_cnt << " datums." << std::endl;
 
@@ -206,7 +217,9 @@ int main(int argc, char** argv) {
  //  DatumInteraction datumItract;
  //  while(iter_->Valid()) {
  //  	datumItract.ParseFromString(iter_->value().ToString());
- //  	std::cout << datumItract.itemid(0) << " " << datumItract.userid(0) << " " << datumItract.rating_size() << std::endl;
+ //  	for (int i = 0; i < datumItract.rating_size(); i++) {
+ //  		std::cout << datumItract.itemid(i) << " " << datumItract.userid(i) << " " << datumItract.rating(i) << std::endl;
+ //  	}
  //  	const string& data = datumItract.datum().data();
  //  	for (int j = 1; j < 10; j++) {
  //  		std::cout << static_cast<int>(static_cast<uint8_t>(data[j])) << "\t";
