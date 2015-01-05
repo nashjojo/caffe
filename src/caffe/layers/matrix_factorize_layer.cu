@@ -109,6 +109,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_User_gpu(const vector<Blob<Dtype>*>& 
   // LOG(INFO) << "Backward_User_gpu";
   // bp diff to user feature in blob_[0]
   if (this->param_propagate_down_[0]) {
+    // LOG(INFO) << "begining";
     const Dtype* rating_diff = top[0]->cpu_diff();  // must be cpu
     Dtype* user_feature_diff = this->blobs_[0]->mutable_gpu_diff(); // Target
     const Dtype* item_feature = item_feature_mixed_.gpu_data();
@@ -137,7 +138,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_User_gpu(const vector<Blob<Dtype>*>& 
         // std::cout << "rating_idx:" << rating_idx << " itemid:" << itemid << " loss:" << loss << std::endl;
       }
       caffe_gpu_gemv(CblasTrans, rating_size, num_latent_,
-        Dtype(1.0) / rating_size, item_feature_buf, rating_buffer_.gpu_data(), Dtype(0.),
+        Dtype(1.0), item_feature_buf, rating_buffer_.gpu_data(), Dtype(0.),
         user_feature_diff + userid*num_latent_);
 
       // LOG(INFO) << "item_feature_buf";
@@ -199,7 +200,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_gpu(const vector<Blob<Dtype>*>& 
           // std::cout << "rating_idx:" << rating_idx  << " itemid:" << itemid << " userid:" << userid << std::endl;
         }
         caffe_gpu_gemv(CblasTrans, rating_size, num_latent_,
-          feature_weight_/rating_size, user_feature_buf, rating_diff + item_offset, Dtype(0.),
+          feature_weight_, user_feature_buf, rating_diff + item_offset, Dtype(0.),
           item_feature_diff + item_real_id*num_latent_);
 
         gen_item_diff_ = true; // indicate we have computed item diff
@@ -278,7 +279,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_img_gpu(const vector<Blob<Dtype>
           // std::cout << "rating_idx:" << rating_idx  << " itemid:" << itemid << " userid:" << userid << std::endl;
         }
         caffe_gpu_gemv(CblasTrans, rating_size, num_latent_,
-          img_weight_/rating_size, user_feature_buf, rating_diff + item_offset, Dtype(0.),
+          img_weight_, user_feature_buf, rating_diff + item_offset, Dtype(0.),
           item_feature_diff + itemid*num_latent_);
 
         gen_item_diff_ = true; // indicate we have computed item diff

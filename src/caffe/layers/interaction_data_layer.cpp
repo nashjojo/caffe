@@ -35,7 +35,7 @@ InteractionDataLayer<Dtype>::~InteractionDataLayer<Dtype>() {
 template <typename Dtype>
 void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top) {
-  LOG(INFO) << "DataLayerSetUp";
+  // LOG(INFO) << "DataLayerSetUp";
   // Initialize DB
   switch (this->layer_param_.data_param().backend()) {
   case DataParameter_DB_LEVELDB:
@@ -221,7 +221,7 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
       top_data_itact[(itact_offset + itact_id)*2 + 1] = datumItract.userid(itact_id);
       top_label_itact[itact_offset + itact_id] = datumItract.rating(itact_id);
       // LOG(INFO) << "itemid:" << datumItract.itemid(itact_id) << " userid:" << datumItract.userid(itact_id)
-        // << " rating:" << datumItract.rating(itact_id);
+      //   << " rating:" << datumItract.rating(itact_id);
     }
     itact_offset += datumItract.userid_size(); // WARNING! ERROR! incase only part of the rating is used. Line 211 ensure this is safe.
 
