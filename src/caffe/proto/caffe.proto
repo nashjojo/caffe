@@ -274,6 +274,7 @@ message LayerParameter {
     DATA_ITACT = 50;  // DataParameter
     MATRIX_FACT = 51; // MatrixFactorizeParameter
     DUMP = 52;  // DumpLayer
+    RMSE_LOSS = 53; // RMSE_loss_layer
   }
   optional LayerType type = 5; // the layer type from the enum above
 

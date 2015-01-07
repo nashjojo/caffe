@@ -162,6 +162,33 @@ void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bot
 template <typename Dtype>
 void InteractionDataLayer<Dtype>::InternalThreadEntry() {
   // LOG(INFO) << "InternalThreadEntry";
+
+  // Check if we would need to randomly skip a few data points
+  if (this->layer_param_.data_param().rand_skip()) {
+    unsigned int skip = caffe_rng_rand() %
+                        this->layer_param_.data_param().rand_skip();
+    // LOG(INFO) << "Skipping " << skip << " data points.";
+    while (skip-- > 0) {
+      switch (this->layer_param_.data_param().backend()) {
+      case DataParameter_DB_LEVELDB:
+        iter_->Next();
+        if (!iter_->Valid()) {
+          iter_->SeekToFirst();
+        }
+        break;
+      case DataParameter_DB_LMDB:
+        if (mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, MDB_NEXT)
+            != MDB_SUCCESS) {
+          CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_,
+                   MDB_FIRST), MDB_SUCCESS);
+        }
+        break;
+      default:
+        LOG(FATAL) << "Unknown database backend";
+      }
+    }
+  }
+
   DatumInteraction datumItract;
   Datum datum;
   CHECK(this->prefetch_data_.count());
@@ -214,14 +241,15 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
 
     top_itact_count[item_id*2] = itact_offset;
     top_itact_count[item_id*2 + 1] = datumItract.userid_size();
-    // LOG(INFO) << "itemid: "<<item_id<<" offset:" << itact_offset << " rating_size: " << datumItract.userid_size();
+    // Note: leveldb traverse not in first in first out order.
+    // LOG(INFO) << "itemid: "<<item_id << " item_real_id:" << datumItract.itemid(0) <<" offset:" << itact_offset << " rating_size: " << datumItract.userid_size();
     // setting interaction data
     for (int itact_id = 0; itact_id < datumItract.userid_size() && itact_offset+itact_id < inact_total_size; ++itact_id) {
       top_data_itact[(itact_offset + itact_id)*2] = datumItract.itemid(itact_id);
       top_data_itact[(itact_offset + itact_id)*2 + 1] = datumItract.userid(itact_id);
       top_label_itact[itact_offset + itact_id] = datumItract.rating(itact_id);
       // LOG(INFO) << "itemid:" << datumItract.itemid(itact_id) << " userid:" << datumItract.userid(itact_id)
-      //   << " rating:" << datumItract.rating(itact_id);
+        // << " rating:" << datumItract.rating(itact_id);
     }
     itact_offset += datumItract.userid_size(); // WARNING! ERROR! incase only part of the rating is used. Line 211 ensure this is safe.
 
@@ -232,6 +260,7 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
       if (!iter_->Valid()) {
         // We have reached the end. Restart from the first.
         DLOG(INFO) << "Restarting data prefetching from start.";
+        // LOG(INFO) << "Restarting data prefetching from start.";
         iter_->SeekToFirst();
       }
       break;

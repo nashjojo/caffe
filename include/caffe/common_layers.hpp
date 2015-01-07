@@ -292,6 +292,7 @@ class InnerProductLayer : public Layer<Dtype> {
  *        bottom[2]: itact_count
  *
  *        top[0]: itact_label_pred
+ *        top[1]: num_ratings
  *
  * TODO(dox): thorough documentation for Forward, Backward, and proto params.
  */
@@ -309,7 +310,7 @@ class MatrixFactorizeLayer : public Layer<Dtype> {
     return LayerParameter_LayerType_MATRIX_FACT;
   }
   virtual inline int ExactNumBottomBlobs() const { return 3; }
-  virtual inline int ExactNumTopBlobs() const { return 1; }
+  virtual inline int ExactNumTopBlobs() const { return 2; }
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,

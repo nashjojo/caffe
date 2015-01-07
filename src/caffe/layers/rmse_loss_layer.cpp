@@ -9,7 +9,7 @@
 namespace caffe {
 
 template <typename Dtype>
-void EuclideanLossLayer<Dtype>::Reshape(
+void RmseLossLayer<Dtype>::Reshape(
   const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
   LossLayer<Dtype>::Reshape(bottom, top);
   CHECK_EQ(bottom[0]->channels(), bottom[1]->channels());
@@ -20,9 +20,11 @@ void EuclideanLossLayer<Dtype>::Reshape(
 }
 
 template <typename Dtype>
-void EuclideanLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+void RmseLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
+  num_rating_ = bottom[2]->cpu_data()[0];
   int count = bottom[0]->count();
+  CHECK_LE(num_rating_, count) << "assigned rating length exceed boundary.";
 
   // const Dtype* data = bottom[0]->cpu_data();
   // for (int i = 0; i < 10; i++){
@@ -36,7 +38,7 @@ void EuclideanLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   // std::cout << std::endl;
 
   caffe_sub(
-      count,
+      num_rating_,
       bottom[0]->cpu_data(),
       bottom[1]->cpu_data(),
       diff_.mutable_cpu_data());
@@ -47,25 +49,25 @@ void EuclideanLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   // }
   // std::cout << std::endl;
 
-  Dtype dot = caffe_cpu_dot(count, diff_.cpu_data(), diff_.cpu_data());
+  Dtype dot = caffe_cpu_dot(num_rating_, diff_.cpu_data(), diff_.cpu_data());
 
   // std::cout << "dot:" << dot << std::endl;
 
-  Dtype loss = dot / bottom[0]->num() / Dtype(2);
-  // Dtype loss = sqrt(dot / bottom[0]->num()); // rmse, temp for movielens.
+  // Dtype loss = dot / bottom[0]->num() / Dtype(2);
+  Dtype loss = sqrt(dot / num_rating_); // rmse, temp for movielens.
   (*top)[0]->mutable_cpu_data()[0] = loss;
-  // LOG(INFO) << "loss "<< loss;
+  // LOG(INFO) << "loss:" << loss << " num_rating_:" << num_rating_;
 }
 
 template <typename Dtype>
-void EuclideanLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
+void RmseLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
   for (int i = 0; i < 2; ++i) {
     if (propagate_down[i]) {
       const Dtype sign = (i == 0) ? 1 : -1;
-      const Dtype alpha = sign * top[0]->cpu_diff()[0] / (*bottom)[i]->num();  // top[0]->cpu_diff()[0] is set to 1 by net that's the total loss of all instance.
+      const Dtype alpha = sign * top[0]->cpu_diff()[0] / num_rating_;  // top[0]->cpu_diff()[0] is set to 1 by net that's the total loss of all instance.
       caffe_cpu_axpby(
-          (*bottom)[i]->count(),              // count
+          num_rating_,                        // num_rating_
           alpha,                              // alpha
           diff_.cpu_data(),                   // a
           Dtype(0),                           // beta
@@ -83,9 +85,9 @@ void EuclideanLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 }
 
 #ifdef CPU_ONLY
-STUB_GPU(EuclideanLossLayer);
+STUB_GPU(RmseLossLayer);
 #endif
 
-INSTANTIATE_CLASS(EuclideanLossLayer);
+INSTANTIATE_CLASS(RmseLossLayer);
 
 }  // namespace caffe

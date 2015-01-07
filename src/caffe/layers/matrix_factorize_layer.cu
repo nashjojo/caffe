@@ -17,6 +17,7 @@ void MatrixFactorizeLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom
   }
 
   // LOG(INFO) << "Forward_gpu";
+  (*top)[1]->mutable_cpu_data()[0] = num_rating_;
   const Dtype* user_feature = this->blobs_[0]->gpu_data();
   const Dtype* item_feature = this->blobs_[1]->gpu_data();
   const Dtype* item_feature_img = bottom[0]->gpu_data();
@@ -112,6 +113,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_User_gpu(const vector<Blob<Dtype>*>& 
     // LOG(INFO) << "begining";
     const Dtype* rating_diff = top[0]->cpu_diff();  // must be cpu
     Dtype* user_feature_diff = this->blobs_[0]->mutable_gpu_diff(); // Target
+    caffe_gpu_set(this->blobs_[0]->count(), Dtype(0.), user_feature_diff); // clearing target diff
     const Dtype* item_feature = item_feature_mixed_.gpu_data();
     const Dtype* itact_data_ = (*bottom)[1]->cpu_data();  // must be cpu
     Dtype* item_feature_buf = item_feature_buffer_.mutable_gpu_data();
@@ -137,8 +139,9 @@ void MatrixFactorizeLayer<Dtype>::Backward_User_gpu(const vector<Blob<Dtype>*>& 
         caffe_copy(num_latent_, item_feature + itemid*num_latent_, item_feature_buf + i*num_latent_);
         // std::cout << "rating_idx:" << rating_idx << " itemid:" << itemid << " loss:" << loss << std::endl;
       }
+      // id may speard in multiple datum, so b cannot be set 0
       caffe_gpu_gemv(CblasTrans, rating_size, num_latent_,
-        Dtype(1.0), item_feature_buf, rating_buffer_.gpu_data(), Dtype(0.),
+        Dtype(1.0), item_feature_buf, rating_buffer_.gpu_data(), Dtype(1.),
         user_feature_diff + userid*num_latent_);
 
       // LOG(INFO) << "item_feature_buf";
@@ -178,6 +181,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_gpu(const vector<Blob<Dtype>*>& 
       // LOG(INFO) << "Calculating";
       const Dtype* rating_diff = top[0]->gpu_diff();
       Dtype* item_feature_diff = this->blobs_[1]->mutable_gpu_diff(); // Target
+      caffe_gpu_set(this->blobs_[1]->count(), Dtype(0.), item_feature_diff); // clearing target diff
       const Dtype* user_feature = this->blobs_[0]->gpu_data(); 
       const Dtype* itact_data_ = (*bottom)[1]->cpu_data();  // must be cpu
       const Dtype* itact_count_ = (*bottom)[2]->cpu_data(); // must be cpu
@@ -199,8 +203,9 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_gpu(const vector<Blob<Dtype>*>& 
           caffe_copy(num_latent_, user_feature + userid*num_latent_, user_feature_buf + rating_cnt*num_latent_);
           // std::cout << "rating_idx:" << rating_idx  << " itemid:" << itemid << " userid:" << userid << std::endl;
         }
+        // id may speard in multiple datum, so b cannot be set 0
         caffe_gpu_gemv(CblasTrans, rating_size, num_latent_,
-          feature_weight_, user_feature_buf, rating_diff + item_offset, Dtype(0.),
+          feature_weight_, user_feature_buf, rating_diff + item_offset, Dtype(1.),
           item_feature_diff + item_real_id*num_latent_);
 
         gen_item_diff_ = true; // indicate we have computed item diff
@@ -257,6 +262,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_img_gpu(const vector<Blob<Dtype>
       // LOG(INFO) << "Calculating";
       const Dtype* rating_diff = top[0]->gpu_diff();
       Dtype* item_feature_diff = (*bottom)[0]->mutable_gpu_diff(); // Target
+      caffe_gpu_set((*bottom)[0]->count(), Dtype(0.), item_feature_diff); // clearing target diff
       const Dtype* user_feature = this->blobs_[0]->gpu_data(); 
       const Dtype* itact_data_ = (*bottom)[1]->cpu_data();  // must be cpu
       const Dtype* itact_count_ = (*bottom)[2]->cpu_data(); // must be cpu
@@ -278,8 +284,9 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_img_gpu(const vector<Blob<Dtype>
           caffe_copy(num_latent_, user_feature + userid*num_latent_, user_feature_buf + rating_cnt*num_latent_);
           // std::cout << "rating_idx:" << rating_idx  << " itemid:" << itemid << " userid:" << userid << std::endl;
         }
+        // id may speard in multiple datum, so b cannot be set 0
         caffe_gpu_gemv(CblasTrans, rating_size, num_latent_,
-          img_weight_, user_feature_buf, rating_diff + item_offset, Dtype(0.),
+          img_weight_, user_feature_buf, rating_diff + item_offset, Dtype(1.),
           item_feature_diff + itemid*num_latent_);
 
         gen_item_diff_ = true; // indicate we have computed item diff

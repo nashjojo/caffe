@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <iostream> // for debug
 
 #include "caffe/net.hpp"
 #include "caffe/proto/caffe.pb.h"
@@ -411,6 +412,7 @@ void SGDSolver<Dtype>::ComputeUpdateValue() {
       // Compute the value to history, and then copy them to the blob's diff.
       Dtype local_rate = rate * net_params_lr[param_id];
       Dtype local_decay = weight_decay * net_params_weight_decay[param_id];
+      // LOG(INFO) << "local_rate:" << local_rate << " local_decay:" << local_decay;
 
       if (local_decay) {
         if (regularization_type == "L2") {
@@ -432,13 +434,65 @@ void SGDSolver<Dtype>::ComputeUpdateValue() {
         }
       }
 
+      // peeking the item feature diff
+      // if (param_id==3) {
+      //   LOG(INFO) << "local_rate:" << local_rate << " local_decay:" << local_decay;
+      //   std::cout << "net_params[param_id]->cpu_diff()" << std::endl;
+      //   for (int i = 1; i < 3; i++) {
+      //     for (int j = 0; j < 10; j++) {
+      //       std::cout << net_params[param_id]->cpu_diff()[i*10+j] << "\t";
+      //     }
+      //     std::cout << std::endl;
+      //   }
+      //   std::cout << std::endl;
+        // std::cout << "history_[param_id]->cpu_data()" << std::endl;
+        // for (int i = 1; i < 3; i++) {
+        //   for (int j = 0; j < 10; j++) {
+        //     std::cout << history_[param_id]->cpu_data()[i*10+j] << "\t";
+        //   }
+        //   std::cout << std::endl;
+        // }
+        // std::cout << std::endl;
+        // std::cout << "net_params[param_id]->cpu_data()" << std::endl;
+        // for (int i = 1; i < 3; i++) {
+        //   for (int j = 0; j < 10; j++) {
+        //     std::cout << net_params[param_id]->cpu_data()[i*10+j] << "\t";
+        //   }
+        //   std::cout << std::endl;
+        // }
+        // std::cout << std::endl;
+      // }
+
       caffe_cpu_axpby(net_params[param_id]->count(), local_rate,
                 net_params[param_id]->cpu_diff(), momentum,
                 history_[param_id]->mutable_cpu_data());
+
+      // if (param_id==3) {
+      //   std::cout << "history_[param_id]->cpu_data()" << std::endl;
+      //   for (int i = 1; i < 3; i++) {
+      //     for (int j = 0; j < 10; j++) {
+      //       std::cout << history_[param_id]->cpu_data()[i*10+j] << "\t";
+      //     }
+      //     std::cout << std::endl;
+      //   }
+      //   std::cout << std::endl;
+      // }
+
       // copy
       caffe_copy(net_params[param_id]->count(),
           history_[param_id]->cpu_data(),
           net_params[param_id]->mutable_cpu_diff());
+
+      // if (param_id==3) {
+      //   std::cout << "net_params[param_id]->cpu_diff()" << std::endl;
+      //   for (int i = 1; i < 3; i++) {
+      //     for (int j = 0; j < 10; j++) {
+      //       std::cout << net_params[param_id]->cpu_diff()[i*10+j] << "\t";
+      //     }
+      //     std::cout << std::endl;
+      //   }
+      //   std::cout << std::endl;
+      // }
     }
     break;
   case Caffe::GPU:
@@ -447,6 +501,7 @@ void SGDSolver<Dtype>::ComputeUpdateValue() {
       // Compute the value to history, and then copy them to the blob's diff.
       Dtype local_rate = rate * net_params_lr[param_id];
       Dtype local_decay = weight_decay * net_params_weight_decay[param_id];
+      // LOG(INFO) << "local_rate:" << local_rate << " local_decay:" << local_decay;
 
       if (local_decay) {
         if (regularization_type == "L2") {

@@ -21,15 +21,14 @@ void DumpLayer<Dtype>::Reshape(
   CHECK_EQ(bottom[1]->channels(), 1);
   CHECK_EQ(bottom[1]->height(), 1);
   CHECK_EQ(bottom[1]->width(), 1);
-  CHECK_EQ(bottom[2]->channels(), 2);
+  CHECK_EQ(bottom[2]->channels(), 1);
   CHECK_EQ(bottom[2]->height(), 1);
   CHECK_EQ(bottom[2]->width(), 1);
   (*top)[0]->Reshape(1, 1, 1, 1);
 
   // actual number of rating in the whole space
-  itact_item_ = bottom[2]->num();
-  const Dtype* itact_count_ = bottom[2]->cpu_data();
-  num_rating_ = itact_count_[(itact_item_-1)*2] + itact_count_[(itact_item_-1)*2+1];
+  num_rating_ = bottom[2]->cpu_data()[0];
+  // LOG(INFO) << "num_rating_ " << num_rating_;
   CHECK_GE(bottom[0]->num(), num_rating_) << "offset exceed end of space";
 }
 

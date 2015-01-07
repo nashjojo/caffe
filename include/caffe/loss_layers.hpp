@@ -86,6 +86,9 @@ class AccuracyLayer : public Layer<Dtype> {
 
 /**
  * @brief Dump bottom blob into a file.
+ *    top[0]: rating
+ *    top[1]: label
+ *    top[2]: num_rating_
  */
 template <typename Dtype>
 class DumpLayer : public Layer<Dtype> {
@@ -115,7 +118,6 @@ class DumpLayer : public Layer<Dtype> {
     }
   }
 
-  int itact_item_;
   int num_rating_; // actual number of instance, bottom[0]->num(); vary each time
 };
 
@@ -336,6 +338,42 @@ class EuclideanLossLayer : public LossLayer<Dtype> {
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
 
   Blob<Dtype> diff_;
+};
+
+/*
+  RMSE layer: euclidean loss layer with variable length
+  bottom[0]: pred
+  bottom[1]: label
+  bottom[2]: total number of ratings
+*/
+template <typename Dtype>
+class RmseLossLayer : public LossLayer<Dtype> {
+ public:
+  explicit RmseLossLayer(const LayerParameter& param)
+      : LossLayer<Dtype>(param), diff_() {}
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_RMSE_LOSS;
+  }
+
+  virtual inline int ExactNumBottomBlobs() const { return 3; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  /// @copydoc RmseLossLayer
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+
+  Blob<Dtype> diff_;
+  int num_rating_;
 };
 
 /**

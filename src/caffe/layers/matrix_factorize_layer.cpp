@@ -99,6 +99,7 @@ void MatrixFactorizeLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     "offset number.";
   
   (*top)[0]->Reshape(bottom[1]->num(), 1, 1, 1);
+  (*top)[1]->Reshape(1, 1, 1, 1);
   // Set up the bias multiplier
   if (max_rating_size_ != bottom[1]->num() && bias_term_) {
     max_rating_size_ = bottom[1]->num();
@@ -211,6 +212,7 @@ template <typename Dtype>
 void MatrixFactorizeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
   // LOG(INFO) << "Forward_cpu";
+  (*top)[1]->mutable_cpu_data()[0] = num_rating_;
   const Dtype* user_feature = this->blobs_[0]->cpu_data();
   const Dtype* item_feature = this->blobs_[1]->cpu_data();
   const Dtype* item_feature_img = bottom[0]->cpu_data();
@@ -237,7 +239,7 @@ void MatrixFactorizeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
       rating_idx = item_offset + rating_cnt;
       userid = static_cast<int>(itact_data_[rating_idx*2+1]);
       caffe_copy(num_latent_, user_feature + userid*num_latent_, user_feature_buf + rating_cnt*num_latent_);
-      // LOG(INFO) << "itemid:" << itemid << " userid:" << userid;
+      // std::cout << "item_real_id:" << item_real_id << " userid:" << userid << std::endl;
     }
 
     caffe_cpu_gemv(CblasNoTrans, rating_size, num_latent_,
@@ -253,19 +255,42 @@ void MatrixFactorizeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
     //   std::cout << std::endl;
     // }
 
-    // LOG(INFO) << "Item feature";
+    // std::cout << "############################" << std::endl;
+    // std::cout << "item_feature " << feature_weight_ << std::endl;
+    // for (int j = 0; j < num_latent_; j++) {
+    //   std::cout << item_feature[item_real_id*num_latent_+j] << "\t";
+    // } 
+    // std::cout << std::endl;
+
+    // std::cout << "item_feature_img " << img_weight_ << std::endl;
+    // for (int j = 0; j < num_latent_; j++) {
+    //   std::cout << item_feature_img[itemid*num_latent_+j] << "\t";
+    // } 
+    // std::cout << std::endl;
+
+    // std::cout << "item_feature_buf" << std::endl;
     // for (int j = 0; j < num_latent_; j++) {
     //   std::cout << item_feature_buf[itemid*num_latent_+j] << "\t";
     // } 
     // std::cout << std::endl;
+    // std::cout << std::endl;
 
     // checking prediction
-    // LOG(INFO) << "Rating prediction";
+    // std::cout << "Rating prediction" << std::endl;
     // for (int j = 0; j < rating_size; j++) {
     //   std::cout << itact_pred_[item_offset+j] << "\t";
     // } 
     // std::cout << std::endl;
 
+    // checking prediction
+    // if (item_real_id==1) {
+    //   std::cout << "Rating prediction after adding bias, offset:" << item_offset << " rating size:" << rating_size << std::endl;
+    //   for (int j = 0; j < rating_size; j++) {
+    //     rating_idx = item_offset + j;
+    //     userid = static_cast<int>(itact_data_[rating_idx*2+1]);
+    //     std::cout << item_real_id << " " << userid << " " << itact_pred_[item_offset+j]+global_bias[0] << std::endl;
+    //   }
+    // }
   }
   if (bias_term_) {
     caffe_add_scalar(num_rating_, global_bias[0], itact_pred_);
@@ -275,9 +300,10 @@ void MatrixFactorizeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
     int extra_length = max_rating_size_ - num_rating_;
     caffe_set(extra_length, Dtype(0.), itact_pred_ + num_rating_);
   }
-  // // checking prediction
+  // checking prediction
   // LOG(INFO) << "Rating prediction after adding bias " << global_bias[0];
   // LOG(INFO) << "Global bias " << global_bias[0];
+  // std::cout << "Rating prediction" << std::endl;
   // for (int j = 0; j < num_rating_; j++) {
   //   std::cout << itact_pred_[j] << "\t";
   // } 
@@ -333,6 +359,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_User_cpu(const vector<Blob<Dtype>*>& 
   if (this->param_propagate_down_[0]) {
     const Dtype* rating_diff = top[0]->cpu_diff();
     Dtype* user_feature_diff = this->blobs_[0]->mutable_cpu_diff(); // Target
+    caffe_set(this->blobs_[0]->count(), Dtype(0.), user_feature_diff); // clearing target diff
     const Dtype* item_feature = item_feature_mixed_.cpu_data(); // feature already combined with img feature
     const Dtype* itact_data_ = (*bottom)[1]->cpu_data();
     Dtype* item_feature_buf = item_feature_buffer_.mutable_cpu_data();
@@ -358,8 +385,9 @@ void MatrixFactorizeLayer<Dtype>::Backward_User_cpu(const vector<Blob<Dtype>*>& 
         caffe_copy(num_latent_, item_feature + itemid*num_latent_, item_feature_buf + i*num_latent_);
         // std::cout << "rating_idx:" << rating_idx << " itemid:" << itemid << " loss:" << loss << std::endl;
       }
+      // id may speard in multiple datum, so b cannot be set 0
       caffe_cpu_gemv(CblasTrans, rating_size, num_latent_,
-        Dtype(1.0), item_feature_buf, rating_buf, Dtype(0.),
+        Dtype(1.0), item_feature_buf, rating_buf, Dtype(1.), 
         user_feature_diff + userid*num_latent_);
 
       // LOG(INFO) << "item_feature_buf";
@@ -376,7 +404,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_User_cpu(const vector<Blob<Dtype>*>& 
       // }
       // std::cout << std::endl;
 
-      // LOG(INFO) << "user_feature_diff";
+      // std::cout << "user_feature_diff:" << userid << std::endl;
       // for (int i = 0; i < num_latent_; i++) {
       //   std::cout << user_feature_diff[userid*num_latent_ + i] << "\t";
       // }
@@ -412,6 +440,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_cpu(const vector<Blob<Dtype>*>& 
       // LOG(INFO) << "Calculating";
       const Dtype* rating_diff = top[0]->cpu_diff();
       Dtype* item_feature_diff = this->blobs_[1]->mutable_cpu_diff(); // Target
+      caffe_set(this->blobs_[1]->count(), Dtype(0.), item_feature_diff); // clearing target diff
       const Dtype* user_feature = this->blobs_[0]->cpu_data(); 
       const Dtype* itact_data_ = (*bottom)[1]->cpu_data();
       const Dtype* itact_count_ = (*bottom)[2]->cpu_data();
@@ -433,11 +462,29 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_cpu(const vector<Blob<Dtype>*>& 
           caffe_copy(num_latent_, user_feature + userid*num_latent_, user_feature_buf + rating_cnt*num_latent_);
           // std::cout << "rating_idx:" << rating_idx  << " itemid:" << itemid << " userid:" << userid << std::endl;
         }
+
+        // if (item_real_id==1) {
+        //   std::cout << "item_feature_diff before adding" << std::endl;
+        //   for (int i = 0; i < num_latent_; i++) {
+        //     std::cout << item_feature_diff[item_real_id*num_latent_ + i] << "\t";
+        //   }
+        //   std::cout << std::endl;
+        // }
+
+        // id may speard in multiple datum, so b cannot be set 0
         caffe_cpu_gemv(CblasTrans, rating_size, num_latent_,
-          feature_weight_, user_feature_buf, rating_diff + item_offset, Dtype(0.),
+          feature_weight_, user_feature_buf, rating_diff + item_offset, Dtype(1.), 
           item_feature_diff + item_real_id*num_latent_);
 
         gen_item_diff_ = true; // indicate we have computed item diff
+
+        // if (item_real_id==1) {
+        //   std::cout << "item_feature_diff after adding" << std::endl;
+        //   for (int i = 0; i < num_latent_; i++) {
+        //     std::cout << item_feature_diff[item_real_id*num_latent_ + i] << "\t";
+        //   }
+        //   std::cout << std::endl;
+        // }
 
         // LOG(INFO) << "user_feature_buf";
         // for (int i = 0; i < rating_size; ++i) {
@@ -447,25 +494,33 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_cpu(const vector<Blob<Dtype>*>& 
         //   std::cout << std::endl;
         // }
 
-        // LOG(INFO) << "loss";
+        // std::cout << "loss" << std::endl;;
         // for (int i = 0; i < rating_size; i++) {
         //   std::cout << rating_diff[item_offset+i] << "\t";
         // }
         // std::cout << std::endl;
 
-        // LOG(INFO) << "item_feature_diff";
+        // std::cout << "item_feature_diff:" << item_real_id << std::endl;
         // for (int i = 0; i < num_latent_; i++) {
         //   std::cout << item_feature_diff[item_real_id*num_latent_ + i] << "\t";
         // }
         // std::cout << std::endl;
 
-        // LOG(INFO) << "item_feature";
         // std::cout << "item_feature" << std::endl;
         // const Dtype* item_feature = this->blobs_[1]->cpu_data(); // Target
         // for (int i = 0; i < num_latent_; i++) {
         //   std::cout << item_feature[item_real_id*num_latent_ + i] << "\t";
         // }
         // std::cout << std::endl;
+
+        // if (item_real_id==1) {
+        //   std::cout << "loss, offset:" << item_offset << " rating size:" << rating_size << std::endl;
+        //   for (int j = 0; j < rating_size; j++) {
+        //     rating_idx = item_offset + j;
+        //     userid = static_cast<int>(itact_data_[rating_idx*2+1]);
+        //     std::cout << item_real_id << " " << userid << " " << rating_diff[item_offset + j] << std::endl;
+        //   }
+        // }
       }
     } else {
       // LOG(INFO) << "copying";
@@ -480,13 +535,12 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_cpu(const vector<Blob<Dtype>*>& 
         item_real_id = itact_data_[item_offset*2];
         caffe_cpu_scale(num_latent_, feature_weight_/img_weight_, item_feature_diff_source + itemid*num_latent_, item_feature_diff + item_real_id*num_latent_);
 
-        // LOG(INFO) << "item_feature_diff";
+        // std::cout << "item_feature_diff:" << item_real_id << std::endl;
         // for (int i = 0; i < num_latent_; i++) {
         //   std::cout << item_feature_diff[item_real_id*num_latent_ + i] << "\t";
         // }
         // std::cout << std::endl;
 
-        // LOG(INFO) << "item_feature";
         // std::cout << "item_feature" << std::endl;
         // const Dtype* item_feature = this->blobs_[1]->cpu_data(); // Target
         // for (int i = 0; i < num_latent_; i++) {
@@ -518,6 +572,7 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_img_cpu(const vector<Blob<Dtype>
       // LOG(INFO) << "Calculating";
       const Dtype* rating_diff = top[0]->cpu_diff();
       Dtype* item_feature_diff = (*bottom)[0]->mutable_cpu_diff(); // Target
+      caffe_set((*bottom)[0]->count(), Dtype(0.), item_feature_diff); // clearing target diff
       const Dtype* user_feature = this->blobs_[0]->cpu_data(); 
       const Dtype* itact_data_ = (*bottom)[1]->cpu_data();
       const Dtype* itact_count_ = (*bottom)[2]->cpu_data();
@@ -539,8 +594,9 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_img_cpu(const vector<Blob<Dtype>
           caffe_copy(num_latent_, user_feature + userid*num_latent_, user_feature_buf + rating_cnt*num_latent_);
           // std::cout << "rating_idx:" << rating_idx  << " itemid:" << itemid << " userid:" << userid << std::endl;
         }
+        // id may speard in multiple datum, so b cannot be set 0
         caffe_cpu_gemv(CblasTrans, rating_size, num_latent_,
-          img_weight_, user_feature_buf, rating_diff + item_offset, Dtype(0.),
+          img_weight_, user_feature_buf, rating_diff + item_offset, Dtype(1.),
           item_feature_diff + itemid*num_latent_);
 
         gen_item_diff_ = true; // indicate we have computed item diff
@@ -553,19 +609,18 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_img_cpu(const vector<Blob<Dtype>
         //   std::cout << std::endl;
         // }
 
-        // LOG(INFO) << "loss";
+        // std::cout << "loss" << std::endl;
         // for (int i = 0; i < rating_size; i++) {
         //   std::cout << rating_diff[item_offset+i] << "\t";
         // }
         // std::cout << std::endl;
 
-        // LOG(INFO) << "item_feature_diff";
+        // std::cout << "item_feature_diff:" << item_real_id << std::endl;
         // for (int i = 0; i < num_latent_; i++) {
         //   std::cout << item_feature_diff[itemid*num_latent_ + i] << "\t";
         // }
         // std::cout << std::endl;
 
-        // LOG(INFO) << "item_feature";
         // std::cout << "item_feature" << std::endl;
         // const Dtype* item_feature = (*bottom)[0]->cpu_data(); // Target
         // for (int i = 0; i < num_latent_; i++) {
@@ -586,13 +641,12 @@ void MatrixFactorizeLayer<Dtype>::Backward_Item_img_cpu(const vector<Blob<Dtype>
         item_real_id = itact_data_[item_offset*2];
         caffe_cpu_scale(num_latent_, img_weight_/feature_weight_, item_feature_diff_source + item_real_id*num_latent_, item_feature_diff + itemid*num_latent_);
 
-        // LOG(INFO) << "item_feature_diff";
+        // std::cout << "item_feature_diff:" << item_real_id << std::endl;
         // for (int i = 0; i < num_latent_; i++) {
         //   std::cout << item_feature_diff[itemid*num_latent_ + i] << "\t";
         // }
         // std::cout << std::endl;
 
-        // LOG(INFO) << "item_feature";
         // std::cout << "item_feature" << std::endl;
         // const Dtype* item_feature = (*bottom)[0]->cpu_data(); // Target
         // for (int i = 0; i < num_latent_; i++) {
