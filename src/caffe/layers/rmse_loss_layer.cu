@@ -18,6 +18,9 @@ void RmseLossLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       bottom[0]->gpu_data(),
       bottom[1]->gpu_data(),
       diff_.mutable_gpu_data());
+  if (bias_!=0) {
+    caffe_gpu_add_scalar(num_rating_, bias_, diff_.mutable_gpu_data());
+  }
   Dtype dot;
   caffe_gpu_dot(num_rating_, diff_.gpu_data(), diff_.gpu_data(), &dot);
   // Dtype loss = dot / bottom[0]->num() / Dtype(2);

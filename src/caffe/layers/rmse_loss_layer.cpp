@@ -11,6 +11,7 @@ namespace caffe {
 template <typename Dtype>
 void RmseLossLayer<Dtype>::Reshape(
   const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
+  bias_ = this->layer_param_.rmse_loss_param().bias();
   LossLayer<Dtype>::Reshape(bottom, top);
   CHECK_EQ(bottom[0]->channels(), bottom[1]->channels());
   CHECK_EQ(bottom[0]->height(), bottom[1]->height());
@@ -27,11 +28,13 @@ void RmseLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   CHECK_LE(num_rating_, count) << "assigned rating length exceed boundary.";
 
   // const Dtype* data = bottom[0]->cpu_data();
+  // std::cout << "data" << std::endl;
   // for (int i = 0; i < 10; i++){
   //   std::cout << data[i] << "\t";
   // }
   // std::cout << std::endl;
   // const Dtype* label = bottom[1]->cpu_data();
+  // std::cout << "label" << std::endl;
   // for (int i = 0; i < 10; i++){
   //   std::cout << label[i] << "\t";
   // }
@@ -43,7 +46,12 @@ void RmseLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       bottom[1]->cpu_data(),
       diff_.mutable_cpu_data());
 
+  if (bias_!=0) {
+    caffe_add_scalar(num_rating_, bias_, diff_.mutable_cpu_data());
+  }
+
   // const Dtype* diff_cpu = diff_.cpu_data();
+  // std::cout << "diff_cpu" << std::endl;
   // for (int i = 0; i < 10; i++){
   //   std::cout << diff_cpu[i] << "\t";
   // }

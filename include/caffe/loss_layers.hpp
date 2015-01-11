@@ -374,6 +374,7 @@ class RmseLossLayer : public LossLayer<Dtype> {
 
   Blob<Dtype> diff_;
   int num_rating_;
+  Dtype bias_;
 };
 
 /**
