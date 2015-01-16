@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <fstream> // for dump layer
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
@@ -94,9 +95,10 @@ template <typename Dtype>
 class DumpLayer : public Layer<Dtype> {
  public:
   explicit DumpLayer(const LayerParameter& param)
-      : Layer<Dtype>(param) {}
+      : Layer<Dtype>(param) {};
+  ~DumpLayer();
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
-      vector<Blob<Dtype>*>* top){};
+      vector<Blob<Dtype>*>* top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
 
@@ -119,6 +121,7 @@ class DumpLayer : public Layer<Dtype> {
   }
 
   int num_rating_; // actual number of instance, bottom[0]->num(); vary each time
+  std::ofstream out;
 };
 
 
