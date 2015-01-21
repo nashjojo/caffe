@@ -249,6 +249,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new SigmoidCrossEntropyLossLayer<Dtype>(param);
   case LayerParameter_LayerType_SLICE:
     return new SliceLayer<Dtype>(param);
+  case LayerParameter_LayerType_SNAPSHOT:
+    return new SnapshotLayer<Dtype>(param);
   case LayerParameter_LayerType_SOFTMAX:
     return GetSoftmaxLayer<Dtype>(name, param);
   case LayerParameter_LayerType_SOFTMAX_LOSS:

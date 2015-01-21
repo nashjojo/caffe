@@ -21,6 +21,7 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
   const int size = datum.channels() * datum.height() * datum.width();
 
   const int crop_size = param_.crop_size();
+  const bool random_crop = param_.random_crop();
   const bool mirror = param_.mirror();
   const Dtype scale = param_.scale();
 
@@ -35,10 +36,11 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
     CHECK(data.size()) << "Image cropping only support uint8 data";
     int h_off, w_off;
     // We only do random crop when we do training.
-    if (phase_ == Caffe::TRAIN) {
+    if (phase_ == Caffe::TRAIN && random_crop) {
       h_off = Rand() % (height - crop_size);
       w_off = Rand() % (width - crop_size);
     } else {
+      // LOG(INFO) << "No random crop";
       h_off = (height - crop_size) / 2;
       w_off = (width - crop_size) / 2;
     }

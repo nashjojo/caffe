@@ -124,6 +124,35 @@ class DumpLayer : public Layer<Dtype> {
   std::ofstream out;
 };
 
+/**
+ * @brief Taking a snapshot of the tranfsered layer
+ *    top[0]: rating
+ */
+template <typename Dtype>
+class SnapshotLayer : public Layer<Dtype> {
+ public:
+  explicit SnapshotLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {};
+  ~SnapshotLayer();
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_SNAPSHOT;
+  }
+
+  virtual inline int ExactNumBottomBlobs() const { return 1; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  std::ofstream out;
+};
 
 /**
  * @brief An interface for Layer%s that take two Blob%s as input -- usually

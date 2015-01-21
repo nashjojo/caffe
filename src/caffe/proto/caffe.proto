@@ -275,6 +275,7 @@ message LayerParameter {
     MATRIX_FACT = 51; // MatrixFactorizeParameter
     DUMP = 52;  // DumpLayer
     RMSE_LOSS = 53; // RMSE_loss_layer
+    SNAPSHOT = 54; // Snapshot_layer
   }
   optional LayerType type = 5; // the layer type from the enum above
 
@@ -333,6 +334,7 @@ message LayerParameter {
   optional MatrixFactorizeParameter matrix_fact_param = 50; // added for MATRIX_FACT
   optional DumpParameter dump_param = 52;  // added for dump_layer
   optional RmseLossParameter rmse_loss_param = 53; // add for RmseLossLayer
+  optional SnapshotParameter snapshot_param = 54;  // added for Snapshot_layer
 
   // Parameters for data pre-processing.
   optional TransformationParameter transform_param = 36;
@@ -360,6 +362,7 @@ message TransformationParameter {
   // Specify if we would like to randomly crop an image.
   optional uint32 crop_size = 3 [default = 0];
   optional string mean_file = 4;
+  optional bool random_crop = 5 [default = true]; // whether to do random crop in training phase
 }
 
 // Message that stores parameters used by AccuracyLayer
@@ -572,6 +575,11 @@ message MatrixFactorizeParameter {
 
 // Message that stores parameters used by DumpLayer
 message DumpParameter {
+  optional string dump_file = 1 [default = "dump_file.txt"];
+}
+
+// SnapshotParameter
+message SnapshotParameter {
   optional string dump_file = 1 [default = "dump_file.txt"];
 }
 
