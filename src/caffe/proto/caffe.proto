@@ -276,6 +276,7 @@ message LayerParameter {
     DUMP = 52;  // DumpLayer
     RMSE_LOSS = 53; // RMSE_loss_layer
     SNAPSHOT = 54; // Snapshot_layer
+    DUMP_FEAT = 55;  // DumpFeatureLayer
   }
   optional LayerType type = 5; // the layer type from the enum above
 
