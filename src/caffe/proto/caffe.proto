@@ -451,6 +451,9 @@ message DataParameter {
   // DEPRECATED. See TransformationParameter. Specify if we want to randomly mirror
   // data.
   optional bool mirror = 6 [default = false];
+
+  // probability of random skiping data points in one batch
+  optional float rand_jump = 20 [default = 0];
 }
 
 // Message that stores parameters used by DropoutLayer

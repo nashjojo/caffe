@@ -75,30 +75,8 @@ void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bot
   }
 
   // Check if we would need to randomly skip a few data points
-  if (this->layer_param_.data_param().rand_skip()) {
-    unsigned int skip = caffe_rng_rand() %
-                        this->layer_param_.data_param().rand_skip();
-    LOG(INFO) << "Skipping first " << skip << " data points.";
-    while (skip-- > 0) {
-      switch (this->layer_param_.data_param().backend()) {
-      case DataParameter_DB_LEVELDB:
-        iter_->Next();
-        if (!iter_->Valid()) {
-          iter_->SeekToFirst();
-        }
-        break;
-      case DataParameter_DB_LMDB:
-        if (mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_, MDB_NEXT)
-            != MDB_SUCCESS) {
-          CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_, &mdb_value_,
-                   MDB_FIRST), MDB_SUCCESS);
-        }
-        break;
-      default:
-        LOG(FATAL) << "Unknown database backend";
-      }
-    }
-  }
+  random_skip();
+  
   // Read a data point, and use it to initialize the top blob.
   DatumInteraction datumItract;
   switch (this->layer_param_.data_param().backend()) {
@@ -158,16 +136,13 @@ void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bot
   this->datum_size_ = datum.channels() * datum.height() * datum.width();
 }
 
-// This function is used to create a thread that prefetches the data.
 template <typename Dtype>
-void InteractionDataLayer<Dtype>::InternalThreadEntry() {
-  // LOG(INFO) << "InternalThreadEntry";
-
+void InteractionDataLayer<Dtype>::random_skip() {
   // Check if we would need to randomly skip a few data points
   if (this->layer_param_.data_param().rand_skip()) {
     unsigned int skip = caffe_rng_rand() %
                         this->layer_param_.data_param().rand_skip();
-    // LOG(INFO) << "Skipping " << skip << " data points.";
+    // LOG(INFO) << "Skipping first " << skip << " data points.";
     while (skip-- > 0) {
       switch (this->layer_param_.data_param().backend()) {
       case DataParameter_DB_LEVELDB:
@@ -188,6 +163,15 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
       }
     }
   }
+}
+
+// This function is used to create a thread that prefetches the data.
+template <typename Dtype>
+void InteractionDataLayer<Dtype>::InternalThreadEntry() {
+  // LOG(INFO) << "InternalThreadEntry";
+
+  // Check if we would need to randomly skip a few data points
+  random_skip();
 
   DatumInteraction datumItract;
   Datum datum;
@@ -208,6 +192,18 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
 
   for (int item_id = 0; item_id < batch_size; ++item_id) {
     // std::cout << "processing itemid:" << item_id << std::endl; 
+
+    // random skip here makes expontionally many combinations
+    if (this->layer_param_.data_param().rand_jump() > 0) {
+      const unsigned int rand_max = 1000000;
+      unsigned int skip = caffe_rng_rand() % rand_max;
+      if (skip <= this->layer_param_.data_param().rand_jump()*rand_max) {
+        // std::cout << "skip:" << skip <<" threshold:" << this->layer_param_.data_param().rand_jump()*rand_max << std::endl;
+        random_skip();
+      }
+    }
+
+
     // get a blob
     switch (this->layer_param_.data_param().backend()) {
     case DataParameter_DB_LEVELDB:

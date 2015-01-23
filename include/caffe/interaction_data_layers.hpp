@@ -115,6 +115,9 @@ class InteractionDataLayer : public BasePrefetchingInteractionDataLayer<Dtype> {
   virtual inline int ExactNumTopBlobs() const { return 5; }
   // Only 4 blobs are allowed: data, label, interaction, interaction label
 
+ private:
+  void random_skip();
+
  protected:
   virtual void InternalThreadEntry();
 
