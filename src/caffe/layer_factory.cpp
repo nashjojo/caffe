@@ -197,6 +197,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new DataLayer<Dtype>(param);
   case LayerParameter_LayerType_DATA_ITACT:
     return new InteractionDataLayer<Dtype>(param);
+  case LayerParameter_LayerType_LABEL_DATA:
+    return new LabelDataLayer<Dtype>(param);
   case LayerParameter_LayerType_DROPOUT:
     return new DropoutLayer<Dtype>(param);
   case LayerParameter_LayerType_DUMMY_DATA:

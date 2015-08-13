@@ -18,6 +18,10 @@
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 
+#include <hash_map>
+#include <fstream>
+#include <sstream>
+
 namespace caffe {
 
 #define HDF5_DATA_DATASET_NAME "data"
@@ -65,6 +69,12 @@ class BaseDataLayer : public Layer<Dtype> {
   const Dtype* mean_;
   Caffe::Phase phase_;
   bool output_labels_;
+
+  // reserved for LabelDataLayer
+  int label_dim_;
+  int total_size_;
+  __gnu_cxx::hash_map<int, int> ID2Idx_; // write once and read many times, use hash_map
+  Blob<Dtype> label_set_; // contain the actual label in order
 };
 
 template <typename Dtype>
@@ -94,6 +104,42 @@ class BasePrefetchingDataLayer :
   Blob<Dtype> prefetch_data_;
   Blob<Dtype> prefetch_label_;
 };
+
+/**
+ * @brief Feed image from database, feed label from a single label file with ID.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+
+template <typename Dtype>
+class LabelDataLayer : public BasePrefetchingDataLayer<Dtype> {
+ public:
+  explicit LabelDataLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~LabelDataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_LABEL_DATA;
+  }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int MinTopBlobs() const { return 1; }
+  virtual inline int MaxTopBlobs() const { return 2; }
+
+ protected:
+  virtual void InternalThreadEntry();
+
+  // LEVELDB
+  shared_ptr<leveldb::DB> db_;
+  shared_ptr<leveldb::Iterator> iter_;
+  // LMDB
+  MDB_env* mdb_env_;
+  MDB_dbi mdb_dbi_;
+  MDB_txn* mdb_txn_;
+  MDB_cursor* mdb_cursor_;
+  MDB_val mdb_key_, mdb_value_;
+}; 
 
 template <typename Dtype>
 class DataLayer : public BasePrefetchingDataLayer<Dtype> {

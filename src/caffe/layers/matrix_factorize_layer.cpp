@@ -234,6 +234,8 @@ void MatrixFactorizeLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
     caffe_copy(num_latent_, item_feature + item_real_id*num_latent_, item_feature_buf + itemid*num_latent_);
     caffe_cpu_axpby(num_latent_, img_weight_, item_feature_img + itemid*num_latent_, feature_weight_, item_feature_buf + itemid*num_latent_);
 
+    // std::cout << "itemid:" << itemid <<" item_real_id:" << item_real_id << std::endl;
+
     // LOG(INFO) << "itemid:" << itemid << " offset:" << item_offset << " rating_size: " << rating_size;
     for (int rating_cnt = 0; rating_cnt < rating_size; ++rating_cnt) {
       rating_idx = item_offset + rating_cnt;

@@ -24,13 +24,15 @@ void EuclideanLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
   int count = bottom[0]->count();
 
+  // LOG(INFO) << "data";
   // const Dtype* data = bottom[0]->cpu_data();
-  // for (int i = 0; i < 10; i++){
+  // for (int i = 0; i < 12; i++){
   //   std::cout << data[i] << "\t";
   // }
   // std::cout << std::endl;
+  // LOG(INFO) << "label";
   // const Dtype* label = bottom[1]->cpu_data();
-  // for (int i = 0; i < 10; i++){
+  // for (int i = 0; i < 12; i++){
   //   std::cout << label[i] << "\t";
   // }
   // std::cout << std::endl;
@@ -41,8 +43,9 @@ void EuclideanLossLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       bottom[1]->cpu_data(),
       diff_.mutable_cpu_data());
 
+  // LOG(INFO) << "diff";
   // const Dtype* diff_cpu = diff_.cpu_data();
-  // for (int i = 0; i < 10; i++){
+  // for (int i = 0; i < 12; i++){
   //   std::cout << diff_cpu[i] << "\t";
   // }
   // std::cout << std::endl;
@@ -74,7 +77,7 @@ void EuclideanLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       
       // const Dtype* diff_cpu = (*bottom)[i]->cpu_diff();
       // std::cout << "diff in loss" << std::endl;
-      // for (int i = 0; i < 10; i++){
+      // for (int i = 0; i < 12; i++){
       //   std::cout << diff_cpu[i] << "\t";
       // }
       // std::cout << std::endl;

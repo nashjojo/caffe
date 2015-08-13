@@ -2,7 +2,7 @@
 // This program converts a set of images to a leveldb by storing them as DatumInteraction
 // proto buffers.
 // Usage:
-// 1. rating_file 2. map_itemid_file 3.item_category 4.output_leveldb
+// 1. rating_file 2. map_itemid_file 3.item_category 4.image-folder 5.output_leveldb
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
@@ -30,7 +30,7 @@ using std::vector;
 using std::string;
 
 const int MAX_ITEM_RATING = 500;
-const int SIZE=256;
+const int SIZE=256; //20 for movielens, 256 for normal image.
 
 bool str2int (long int &i, string s)
 {
@@ -140,6 +140,7 @@ int main(int argc, char** argv) {
 				db->Put(leveldb::WriteOptions(), ss.str(), datumItact.SerializeAsString());
 				datum_cnt ++;
 
+				// std::cout << "wrting item:" << itemid_last << " with #ratings:" << rating_cnt << std::endl;
 				if (datum_cnt%1000==0) {
 					std::cout << "datum number " << datum_cnt << std::endl;
 				}
@@ -159,7 +160,8 @@ int main(int argc, char** argv) {
 			img_name = ss.str();
 			// img_name = image_folder + "/" + string(itemid) + ".jpg";
 			// resize all image to SIZE*SIZE
-			if (!ReadImageToDatumWithSameAspectRatio(img_name, category_id, SIZE, SIZE, true, datum)) {
+			// No need to preserve aspect ratio. ReadImageToDatumWithSameAspectRatio
+			if (!ReadImageToDatum(img_name, category_id, SIZE, SIZE, true, datum)) {
 				std::cout << img_name << " is broken" << std::endl;
 				continue;
 			}
@@ -179,6 +181,7 @@ int main(int argc, char** argv) {
 		} else {
 			datumItact.add_rating(0);
 		}
+		// datumItact.add_rating(click); // for movielens
 		rating_cnt ++;
 	}
 
@@ -196,37 +199,37 @@ int main(int argc, char** argv) {
 	delete db;
 	std::cout << "Finished. Total " << datum_cnt << " datums." << std::endl;
 
-	// // reading the leveldb
-	// shared_ptr<leveldb::DB> db_;
-	// shared_ptr<leveldb::Iterator> iter_;
+	// reading the leveldb
+	shared_ptr<leveldb::DB> db_;
+	shared_ptr<leveldb::Iterator> iter_;
 
- //  leveldb::DB* db_temp;
- //  leveldb::Options options1 = GetLevelDBOptions();
- //  options1.create_if_missing = false;
- //  LOG(INFO) << "Opening leveldb " << argv[1];
- //  leveldb::Status status1 = leveldb::DB::Open(
- //      options1, output_leveldb, &db_temp);
- //  CHECK(status1.ok()) << "Failed to open leveldb "
- //                     << output_leveldb << std::endl
- //                     << status1.ToString();
+  leveldb::DB* db_temp;
+  leveldb::Options options1 = GetLevelDBOptions();
+  options1.create_if_missing = false;
+  LOG(INFO) << "Opening leveldb " << argv[1];
+  leveldb::Status status1 = leveldb::DB::Open(
+      options1, output_leveldb, &db_temp);
+  CHECK(status1.ok()) << "Failed to open leveldb "
+                     << output_leveldb << std::endl
+                     << status1.ToString();
 
- //  db_.reset(db_temp);
- //  iter_.reset(db_->NewIterator(leveldb::ReadOptions()));
- //  iter_->SeekToFirst();
+  db_.reset(db_temp);
+  iter_.reset(db_->NewIterator(leveldb::ReadOptions()));
+  iter_->SeekToFirst();
 
- //  DatumInteraction datumItract;
- //  while(iter_->Valid()) {
- //  	datumItract.ParseFromString(iter_->value().ToString());
- //  	for (int i = 0; i < datumItract.rating_size(); i++) {
- //  		std::cout << datumItract.itemid(i) << " " << datumItract.userid(i) << " " << datumItract.rating(i) << std::endl;
- //  	}
- //  	const string& data = datumItract.datum().data();
- //  	for (int j = 1; j < 10; j++) {
- //  		std::cout << static_cast<int>(static_cast<uint8_t>(data[j])) << "\t";
- //  	}
- //  	std::cout << std::endl;
- //  	iter_->Next();
- //  }
+  DatumInteraction datumItract;
+  while(iter_->Valid()) {
+  	datumItract.ParseFromString(iter_->value().ToString());
+  	for (int i = 0; i < datumItract.rating_size(); i++) {
+  		std::cout << datumItract.itemid(i) << " " << datumItract.userid(i) << " " << datumItract.rating(i) << std::endl;
+  	}
+  	const string& data = datumItract.datum().data();
+  	for (int j = 1; j < 10; j++) {
+  		std::cout << static_cast<int>(static_cast<uint8_t>(data[j])) << "\t";
+  	}
+  	std::cout << std::endl;
+  	iter_->Next();
+  }
 
 	return 0;
 }

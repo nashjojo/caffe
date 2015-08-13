@@ -23,7 +23,7 @@ message Datum {
   optional int32 width = 3;
   // the actual image data, in bytes
   optional bytes data = 4;
-  optional int32 label = 5;
+  optional int32 label = 5; // used to store ItemID in LabelDataLayer
   // Optionally, the datum could also hold float data.
   repeated float float_data = 6;
 }
@@ -277,6 +277,7 @@ message LayerParameter {
     RMSE_LOSS = 53; // RMSE_loss_layer
     SNAPSHOT = 54; // Snapshot_layer
     DUMP_FEAT = 55;  // DumpFeatureLayer
+    LABEL_DATA = 56; // LabelDataLayer
   }
   optional LayerType type = 5; // the layer type from the enum above
 
@@ -454,6 +455,14 @@ message DataParameter {
 
   // probability of random skiping data points in one batch
   optional float rand_jump = 20 [default = 0];
+  // Specify the label file <Label>
+  optional string label_source = 21;
+  // Specify the label id <id>
+  optional string label_id = 24;
+  // Label dimension, be the same with dim in final softmax
+  optional uint32 label_dim = 22;
+  // Total number of distinct label
+  optional uint32 total_size = 23;
 }
 
 // Message that stores parameters used by DropoutLayer

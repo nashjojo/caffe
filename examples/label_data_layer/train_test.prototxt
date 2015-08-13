@@ -1,0 +1,64 @@
+name: "LabelDataLayer_test"
+layers {
+  name: "cifar"
+  type: LABEL_DATA
+  top: "data"
+  top: "label"
+  data_param {
+    source: "../../examples/cifar10/cifar10_train_leveldb"
+    batch_size: 2
+
+    label_source: "../../examples/label_data_layer/label_source.csv"
+    label_id: "../../examples/label_data_layer/label_id.csv"
+    label_dim: 6
+    total_size: 10
+  }
+  transform_param {
+    mean_file: "../../examples/cifar10/mean.binaryproto"
+  }
+  include: { phase: TRAIN }
+}
+layers {
+  name: "cifar"
+  type: LABEL_DATA
+  top: "data"
+  top: "label"
+  data_param {
+    source: "../../examples/cifar10/cifar10_test_leveldb"
+    batch_size: 2
+
+    label_source: "../../examples/label_data_layer/label_source.csv"
+    label_id: "../../examples/label_data_layer/label_id.csv"
+    label_dim: 6
+    total_size: 10
+  }
+  transform_param {
+    mean_file: "../../examples/cifar10/mean.binaryproto"
+  }
+  include: { phase: TEST }
+}
+layers {
+  name: "ip2"
+  type: INNER_PRODUCT
+  bottom: "data"
+  top: "ip2"
+  blobs_lr: 1
+  blobs_lr: 2
+  inner_product_param {
+    num_output: 6
+    weight_filler {
+      type: "gaussian"
+      std: 0.00001
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layers {
+  name: "loss"
+  type: EUCLIDEAN_LOSS
+  bottom: "ip2"
+  bottom: "label"
+  top: "loss"
+}

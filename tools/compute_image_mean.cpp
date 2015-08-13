@@ -152,8 +152,10 @@ int main(int argc, char** argv) {
     sum_blob.set_data(i, sum_blob.data(i) / count);
   }
   // Write to disk
+  // LOG(ERROR) << "Write to " << argv[2];
   LOG(INFO) << "Write to " << argv[2];
   WriteProtoToBinaryFile(sum_blob, argv[2]);
+  // LOG(ERROR) << "FINISHED Write to " << argv[2];
 
   // Clean up
   if (db_backend == "leveldb") {

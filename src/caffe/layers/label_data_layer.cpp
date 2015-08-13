@@ -5,17 +5,19 @@
 #include <vector>
 
 #include "caffe/common.hpp"
-#include "caffe/interaction_data_layers.hpp"
+#include "caffe/data_layers.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/io.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
 
+#include <hash_map>
+
 namespace caffe {
 
 template <typename Dtype>
-InteractionDataLayer<Dtype>::~InteractionDataLayer<Dtype>() {
+LabelDataLayer<Dtype>::~LabelDataLayer<Dtype>() {
   this->JoinPrefetchThread();
   // clean up the database resources
   switch (this->layer_param_.data_param().backend()) {
@@ -33,9 +35,8 @@ InteractionDataLayer<Dtype>::~InteractionDataLayer<Dtype>() {
 }
 
 template <typename Dtype>
-void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+void LabelDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top) {
-  // LOG(INFO) << "DataLayerSetUp";
   // Initialize DB
   switch (this->layer_param_.data_param().backend()) {
   case DataParameter_DB_LEVELDB:
@@ -75,74 +76,10 @@ void InteractionDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bot
   }
 
   // Check if we would need to randomly skip a few data points
-  random_skip();
-  
-  // Read a data point, and use it to initialize the top blob.
-  DatumInteraction datumItract;
-  switch (this->layer_param_.data_param().backend()) {
-  case DataParameter_DB_LEVELDB:
-    datumItract.ParseFromString(iter_->value().ToString());
-    break;
-  case DataParameter_DB_LMDB:
-    datumItract.ParseFromArray(mdb_value_.mv_data, mdb_value_.mv_size);
-    break;
-  default:
-    LOG(FATAL) << "Unknown database backend";
-  }
-
-  Datum datum = datumItract.datum();
-  // image
-  int crop_size = this->layer_param_.transform_param().crop_size();
-  if (crop_size > 0) {
-    (*top)[0]->Reshape(this->layer_param_.data_param().batch_size(),
-                       datum.channels(), crop_size, crop_size);
-    this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size(),
-        datum.channels(), crop_size, crop_size);
-  } else {
-    (*top)[0]->Reshape(
-        this->layer_param_.data_param().batch_size(), datum.channels(),
-        datum.height(), datum.width());
-    this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size(),
-        datum.channels(), datum.height(), datum.width());
-  }
-  LOG(INFO) << "output data size: " << (*top)[0]->num() << ","
-      << (*top)[0]->channels() << "," << (*top)[0]->height() << ","
-      << (*top)[0]->width();
-  // label
-  if (this->output_labels_) {
-    (*top)[1]->Reshape(this->layer_param_.data_param().batch_size(), 1, 1, 1);
-    this->prefetch_label_.Reshape(this->layer_param_.data_param().batch_size(),
-        1, 1, 1);
-  }
-
-  // interaction_data have variable lenth, maybe we just use max length?
-  inact_total_size = this->layer_param_.data_param().batch_size() * this->layer_param_.data_param().itact_size();
-  // LOG(INFO) << "setting up prefetches_data/label batch_size*itact_size " << this->layer_param_.data_param().batch_size()<<"*"<<this->layer_param_.data_param().itact_size();
-
-  (*top)[2]->Reshape(
-      inact_total_size, 2, 1, 1);
-  this->prefetch_itact_data_.Reshape(inact_total_size, 2, 1, 1);
-  (*top)[3]->Reshape(
-      inact_total_size, 1, 1, 1);
-  this->prefetch_itact_label_.Reshape(inact_total_size, 1, 1, 1);
-  (*top)[4]->Reshape(
-      this->layer_param_.data_param().batch_size(), 2, 1, 1);
-  this->prefetch_itact_count_.Reshape(this->layer_param_.data_param().batch_size(), 2, 1, 1);
-
-  // datum size
-  this->datum_channels_ = datum.channels();
-  this->datum_height_ = datum.height();
-  this->datum_width_ = datum.width();
-  this->datum_size_ = datum.channels() * datum.height() * datum.width();
-}
-
-template <typename Dtype>
-void InteractionDataLayer<Dtype>::random_skip() {
-  // Check if we would need to randomly skip a few data points
   if (this->layer_param_.data_param().rand_skip()) {
     unsigned int skip = caffe_rng_rand() %
                         this->layer_param_.data_param().rand_skip();
-    // LOG(INFO) << "Skipping first " << skip << " data points.";
+    LOG(INFO) << "Skipping first " << skip << " data points.";
     while (skip-- > 0) {
       switch (this->layer_param_.data_param().backend()) {
       case DataParameter_DB_LEVELDB:
@@ -163,91 +100,165 @@ void InteractionDataLayer<Dtype>::random_skip() {
       }
     }
   }
+  // Read a data point, and use it to initialize the top blob.
+  Datum datum;
+  switch (this->layer_param_.data_param().backend()) {
+  case DataParameter_DB_LEVELDB:
+    datum.ParseFromString(iter_->value().ToString());
+    break;
+  case DataParameter_DB_LMDB:
+    datum.ParseFromArray(mdb_value_.mv_data, mdb_value_.mv_size);
+    break;
+  default:
+    LOG(FATAL) << "Unknown database backend";
+  }
+
+  // TODO: Read in label file. 
+  // __gnu_cxx::hash_map<int, int> ID2Idx;
+  // read in file from 
+  this->label_dim_= this->layer_param_.data_param().label_dim();
+  this->total_size_= this->layer_param_.data_param().total_size();
+  this->label_set_.Reshape(this->total_size_, this->label_dim_, 1, 1);
+
+  LOG(INFO) << "Reading Label from file";
+  
+  LOG(INFO) << this->layer_param_.data_param().label_source();
+  // LOG(INFO) << this->layer_param_.data_param().label_dim();
+  // LOG(INFO) << this->layer_param_.data_param().total_size();
+  Dtype* mem_label = NULL;
+  mem_label = this->label_set_.mutable_cpu_data();
+  Dtype temp = 0;
+  int line_id, col_id;
+  line_id = 0, col_id = 0;
+  std::ifstream infile( this->layer_param_.data_param().label_source().c_str() );
+  while (infile) {
+    string s;
+    if (!getline( infile, s ))
+      break;
+    std::istringstream ss( s );
+    col_id = 0;
+    while (ss) {
+      string s;
+      if (!getline( ss, s, ',' )) 
+        break;
+      std::istringstream sss( s );
+      sss >> temp;
+      // check #dimension consistent
+      CHECK_GE(this->label_dim_, col_id+1) << "Label idx " << col_id << " exceed maximum dimension " << this->label_dim_;
+      // std::cout << temp << " ";
+      // std::cout << line_id << "," << col_id << ":" << temp << std::endl;
+      mem_label[line_id*this->label_dim_ + col_id] = temp;
+      col_id ++;
+    }
+    line_id ++;
+    // std::cout << std::endl;
+  }
+  int label_vector = line_id;  
+
+  // Load all <ID>
+  LOG(INFO) << this->layer_param_.data_param().label_id();
+  int temp_id = 0;
+  line_id = 0;
+  std::ifstream infile2( this->layer_param_.data_param().label_id().c_str() );
+  while (infile2) {
+    string s;
+    if (!getline( infile2, s ))
+      break;
+    std::istringstream ss( s );
+    ss >> temp_id;
+    this->ID2Idx_[temp_id] = line_id;
+    // std::cout << temp_id << "," << line_id << std::endl;
+    line_id ++;
+  }
+
+  // check #ID = #Label_vector
+  CHECK_EQ(line_id, label_vector)
+      << "#ID and #label dismatch! #ID=" << line_id << " but  #label_vector=" << label_vector;
+  LOG(INFO) << "Label Loading Completed";
+
+  // image
+  int crop_size = this->layer_param_.transform_param().crop_size();
+  if (crop_size > 0) {
+    (*top)[0]->Reshape(this->layer_param_.data_param().batch_size(),
+                       datum.channels(), crop_size, crop_size);
+    this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size(),
+        datum.channels(), crop_size, crop_size);
+  } else {
+    (*top)[0]->Reshape(
+        this->layer_param_.data_param().batch_size(), datum.channels(),
+        datum.height(), datum.width());
+    this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size(),
+        datum.channels(), datum.height(), datum.width());
+  }
+  LOG(INFO) << "output data size: " << (*top)[0]->num() << ","
+      << (*top)[0]->channels() << "," << (*top)[0]->height() << ","
+      << (*top)[0]->width();
+  // label allocation 
+  if (this->output_labels_) {
+    (*top)[1]->Reshape(this->layer_param_.data_param().batch_size(), this->label_dim_, 1, 1);
+    this->prefetch_label_.Reshape(this->layer_param_.data_param().batch_size(),
+        this->label_dim_, 1, 1);
+  }
+  // datum size
+  this->datum_channels_ = datum.channels();
+  this->datum_height_ = datum.height();
+  this->datum_width_ = datum.width();
+  this->datum_size_ = datum.channels() * datum.height() * datum.width();
 }
 
 // This function is used to create a thread that prefetches the data.
 template <typename Dtype>
-void InteractionDataLayer<Dtype>::InternalThreadEntry() {
-  // LOG(INFO) << "InternalThreadEntry";
-
-  // Check if we would need to randomly skip a few data points
-  random_skip();
-
-  DatumInteraction datumItract;
+void LabelDataLayer<Dtype>::InternalThreadEntry() {
   Datum datum;
   CHECK(this->prefetch_data_.count());
   Dtype* top_data = this->prefetch_data_.mutable_cpu_data();
   Dtype* top_label = NULL;  // suppress warnings about uninitialized variables
+  const Dtype* mem_label = this->label_set_.cpu_data();
+  int memID = 0, item_origin_ID = 0;
   if (this->output_labels_) {
     top_label = this->prefetch_label_.mutable_cpu_data();
   }
   const int batch_size = this->layer_param_.data_param().batch_size();
 
-  Dtype* top_data_itact = this->prefetch_itact_data_.mutable_cpu_data();
-  Dtype* top_label_itact = this->prefetch_itact_label_.mutable_cpu_data();
-  Dtype* top_itact_count = this->prefetch_itact_count_.mutable_cpu_data();
-  // use a variable length vector to hold first?
-  // Hard to know which part of the click data is belong to which, if not fixed length.
-  int itact_offset = 0;
-
   for (int item_id = 0; item_id < batch_size; ++item_id) {
-    // std::cout << "processing itemid:" << item_id << std::endl; 
-
-    // random skip here makes expontionally many combinations
-    if (this->layer_param_.data_param().rand_jump() > 0) {
-      const unsigned int rand_max = 1000000;
-      unsigned int skip = caffe_rng_rand() % rand_max;
-      if (skip <= this->layer_param_.data_param().rand_jump()*rand_max) {
-        // std::cout << "skip:" << skip <<" threshold:" << this->layer_param_.data_param().rand_jump()*rand_max << std::endl;
-        random_skip();
-      }
-    }
-
-
     // get a blob
     switch (this->layer_param_.data_param().backend()) {
     case DataParameter_DB_LEVELDB:
       CHECK(iter_);
       CHECK(iter_->Valid());
-      datumItract.ParseFromString(iter_->value().ToString());
+      datum.ParseFromString(iter_->value().ToString());
       break;
     case DataParameter_DB_LMDB:
       CHECK_EQ(mdb_cursor_get(mdb_cursor_, &mdb_key_,
               &mdb_value_, MDB_GET_CURRENT), MDB_SUCCESS);
-      datumItract.ParseFromArray(mdb_value_.mv_data,
+      datum.ParseFromArray(mdb_value_.mv_data,
           mdb_value_.mv_size);
       break;
     default:
       LOG(FATAL) << "Unknown database backend";
     }
 
-    datum = datumItract.datum();
-    // LOG(INFO) << "this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);";
     // Apply data transformations (mirror, scale, crop...)
     this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
 
     if (this->output_labels_) {
-      top_label[item_id] = datum.label();
-    }
+      // read hash map and copy
+      // top_label[item_id] = datum.label();
+      item_origin_ID = datum.label();
 
-    // adding interaction datatype
-    CHECK_EQ(datumItract.userid_size(), datumItract.itemid_size()) << "userid and itemid have different length";
-    CHECK_EQ(datumItract.userid_size(), datumItract.rating_size()) << "userid and rating have different length";
-    CHECK_GE(this->prefetch_itact_data_.num(), itact_offset+datumItract.userid_size()) << "Max number of rating exceeded!";
+      // TESTING
+      // item_origin_ID = item_origin_ID%2;
 
-    top_itact_count[item_id*2] = itact_offset;
-    top_itact_count[item_id*2 + 1] = datumItract.userid_size();
-    // Note: leveldb traverse not in first in first out order.
-    // LOG(INFO) << "itemid: "<<item_id << " item_real_id:" << datumItract.itemid(0) <<" offset:" << itact_offset << " rating_size: " << datumItract.userid_size();
-    // setting interaction data
-    for (int itact_id = 0; itact_id < datumItract.userid_size() && itact_offset+itact_id < inact_total_size; ++itact_id) {
-      top_data_itact[(itact_offset + itact_id)*2] = datumItract.itemid(itact_id);
-      top_data_itact[(itact_offset + itact_id)*2 + 1] = datumItract.userid(itact_id);
-      top_label_itact[itact_offset + itact_id] = datumItract.rating(itact_id);
-      // LOG(INFO) << "itemid:" << datumItract.itemid(itact_id) << " userid:" << datumItract.userid(itact_id)
-        // << " rating:" << datumItract.rating(itact_id);
+      // check if key exists
+      if (this->ID2Idx_.find(item_origin_ID) == this->ID2Idx_.end()) {
+        LOG(FATAL) << "item_origin_ID " << item_origin_ID << " not found";
+      } else {
+        memID = this->ID2Idx_[item_origin_ID];
+      }      
+      caffe_copy(this->label_dim_, mem_label + memID*this->label_dim_,
+             top_label + item_id*this->label_dim_);
+      // LOG(INFO) << "item_origin_ID " << item_origin_ID << " memID " << memID;
     }
-    itact_offset += datumItract.userid_size(); // WARNING! ERROR! incase only part of the rating is used. Line 211 ensure this is safe.
 
     // go to the next iter
     switch (this->layer_param_.data_param().backend()) {
@@ -256,7 +267,6 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
       if (!iter_->Valid()) {
         // We have reached the end. Restart from the first.
         DLOG(INFO) << "Restarting data prefetching from start.";
-        // LOG(INFO) << "Restarting data prefetching from start.";
         iter_->SeekToFirst();
       }
       break;
@@ -273,15 +283,8 @@ void InteractionDataLayer<Dtype>::InternalThreadEntry() {
       LOG(FATAL) << "Unknown database backend";
     }
   }
-  // set the extra space in top_data_itact and top_label_itact to 0, in cpu version
-  if (itact_offset < this->prefetch_itact_label_.num()) {
-    int extra_length = this->prefetch_itact_label_.num() - itact_offset;
-    caffe_set(extra_length*2, Dtype(0.), top_data_itact + itact_offset*2);
-    caffe_set(extra_length, Dtype(0.), top_label_itact + itact_offset);
-  }
-  // LOG(INFO) << "data fetching completed.";
 }
 
-INSTANTIATE_CLASS(InteractionDataLayer);
+INSTANTIATE_CLASS(LabelDataLayer);
 
 }  // namespace caffe
