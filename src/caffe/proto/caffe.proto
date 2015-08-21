@@ -278,6 +278,7 @@ message LayerParameter {
     SNAPSHOT = 54; // Snapshot_layer
     DUMP_FEAT = 55;  // DumpFeatureLayer
     LABEL_DATA = 56; // LabelDataLayer
+    DUMP_COL = 57; // DumpColumnLayer
   }
   optional LayerType type = 5; // the layer type from the enum above
 

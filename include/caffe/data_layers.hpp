@@ -103,6 +103,86 @@ class BasePrefetchingDataLayer :
  protected:
   Blob<Dtype> prefetch_data_;
   Blob<Dtype> prefetch_label_;
+  Blob<Dtype> prefetch_id_;   // for LabelDataLayer
+};
+
+/**
+ * @brief Provides base for data layers that feed blobs to the Net. Only for LabelDataLayer.
+ *
+ * TODO(dox): thorough documentation for Forward and proto params.
+ */
+template <typename Dtype>
+class BaseLabelDataLayer : public Layer<Dtype> {
+ public:
+  explicit BaseLabelDataLayer(const LayerParameter& param);
+  virtual ~BaseLabelDataLayer() {}
+  // LayerSetUp: implements common data layer setup functionality, and calls
+  // DataLayerSetUp to do special data layer setup for individual layer types.
+  // This method may not be overridden except by the BasePrefetchingLabelDataLayer.
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top) {}
+  // Data layers have no bottoms, so reshaping is trivial.
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top) {}
+
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {}
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {}
+
+  int datum_channels() const { return datum_channels_; }
+  int datum_height() const { return datum_height_; }
+  int datum_width() const { return datum_width_; }
+  int datum_size() const { return datum_size_; }
+
+ protected:
+  TransformationParameter transform_param_;
+  DataTransformer<Dtype> data_transformer_;
+  int datum_channels_;
+  int datum_height_;
+  int datum_width_;
+  int datum_size_;
+  Blob<Dtype> data_mean_;
+  const Dtype* mean_;
+  Caffe::Phase phase_;
+  bool output_labels_;
+
+  // reserved for LabelDataLayer
+  int label_dim_;
+  int total_size_;
+  __gnu_cxx::hash_map<int, int> ID2Idx_; // write once and read many times, use hash_map
+  Blob<Dtype> label_set_; // contain the actual label in order
+};
+
+template <typename Dtype>
+class BasePrefetchingLabelDataLayer :
+    public BaseLabelDataLayer<Dtype>, public InternalThread {
+ public:
+  explicit BasePrefetchingLabelDataLayer(const LayerParameter& param)
+      : BaseLabelDataLayer<Dtype>(param) {}
+  virtual ~BasePrefetchingLabelDataLayer() {}
+  // LayerSetUp: implements common data layer setup functionality, and calls
+  // DataLayerSetUp to do special data layer setup for individual layer types.
+  // This method may not be overridden.
+  void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual void CreatePrefetchThread();
+  virtual void JoinPrefetchThread();
+  // The thread's function
+  virtual void InternalThreadEntry() {}
+
+ protected:
+  Blob<Dtype> prefetch_data_;
+  Blob<Dtype> prefetch_label_;
+  Blob<Dtype> prefetch_id_;   // for LabelDataLayer
 };
 
 /**
@@ -110,12 +190,11 @@ class BasePrefetchingDataLayer :
  *
  * TODO(dox): thorough documentation for Forward and proto params.
  */
-
 template <typename Dtype>
-class LabelDataLayer : public BasePrefetchingDataLayer<Dtype> {
+class LabelDataLayer : public BasePrefetchingLabelDataLayer<Dtype> {
  public:
   explicit LabelDataLayer(const LayerParameter& param)
-      : BasePrefetchingDataLayer<Dtype>(param) {}
+      : BasePrefetchingLabelDataLayer<Dtype>(param) {}
   virtual ~LabelDataLayer();
   virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
@@ -125,7 +204,7 @@ class LabelDataLayer : public BasePrefetchingDataLayer<Dtype> {
   }
   virtual inline int ExactNumBottomBlobs() const { return 0; }
   virtual inline int MinTopBlobs() const { return 1; }
-  virtual inline int MaxTopBlobs() const { return 2; }
+  virtual inline int MaxTopBlobs() const { return 3; }
 
  protected:
   virtual void InternalThreadEntry();

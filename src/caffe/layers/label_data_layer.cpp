@@ -198,6 +198,9 @@ void LabelDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
     (*top)[1]->Reshape(this->layer_param_.data_param().batch_size(), this->label_dim_, 1, 1);
     this->prefetch_label_.Reshape(this->layer_param_.data_param().batch_size(),
         this->label_dim_, 1, 1);
+    (*top)[2]->Reshape(this->layer_param_.data_param().batch_size(), 1, 1, 1);
+    this->prefetch_id_.Reshape(this->layer_param_.data_param().batch_size(),
+        1, 1, 1);
   }
   // datum size
   this->datum_channels_ = datum.channels();
@@ -213,10 +216,12 @@ void LabelDataLayer<Dtype>::InternalThreadEntry() {
   CHECK(this->prefetch_data_.count());
   Dtype* top_data = this->prefetch_data_.mutable_cpu_data();
   Dtype* top_label = NULL;  // suppress warnings about uninitialized variables
+  Dtype* top_id = NULL;
   const Dtype* mem_label = this->label_set_.cpu_data();
   int memID = 0, item_origin_ID = 0;
   if (this->output_labels_) {
     top_label = this->prefetch_label_.mutable_cpu_data();
+    top_id = this->prefetch_id_.mutable_cpu_data();
   }
   const int batch_size = this->layer_param_.data_param().batch_size();
 
@@ -257,6 +262,8 @@ void LabelDataLayer<Dtype>::InternalThreadEntry() {
       }      
       caffe_copy(this->label_dim_, mem_label + memID*this->label_dim_,
              top_label + item_id*this->label_dim_);
+      
+      top_id[item_id] = item_origin_ID;
       // LOG(INFO) << "item_origin_ID " << item_origin_ID << " memID " << memID;
     }
 

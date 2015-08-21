@@ -207,6 +207,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new DumpLayer<Dtype>(param);
   case LayerParameter_LayerType_DUMP_FEAT:
     return new DumpFeatureLayer<Dtype>(param);
+  case LayerParameter_LayerType_DUMP_COL:
+    return new DumpColumnLayer<Dtype>(param);
   case LayerParameter_LayerType_EUCLIDEAN_LOSS:
     return new EuclideanLossLayer<Dtype>(param);
   case LayerParameter_LayerType_ELTWISE:

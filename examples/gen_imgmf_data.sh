@@ -12,8 +12,9 @@ target_file="/home/nash/Documents/TmallImgCtr/data/ImageMF/workplace2/dataset/la
 # echo testing img 
 # ../build/examples/gen_imgmf_data.bin ${folder}/train_mapped.txt.tail ${folder}/auction_id.txt ${folder}/item_mapped.txt /home/nash/Documents/TmallImgCtr/data/ImageMF/original/images ${target_file}
 
+echo "make sure SSD is mounted"
 echo train
-../build/examples/gen_imgmf_data.bin ${stratified}/TrainID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/train
+# ../build/examples/gen_imgmf_data.bin ${stratified}/TrainID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/train
 
 echo valid
 # ../build/examples/gen_imgmf_data.bin ${stratified}/ValidID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/valid
@@ -22,7 +23,10 @@ echo test_head
 # ../build/examples/gen_imgmf_data.bin ${stratified}/TestHeadID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/test_head
 
 echo test_tail
-../build/examples/gen_imgmf_data.bin ${stratified}/TestTailID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/test_tail
+# ../build/examples/gen_imgmf_data.bin ${stratified}/TestTailID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/test_tail
 
 echo test_new
-../build/examples/gen_imgmf_data.bin ${stratified}/TestNewID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/test_new
+# ../build/examples/gen_imgmf_data.bin ${stratified}/TestNewID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/test_new
+
+echo all
+../build/examples/gen_imgmf_data.bin ${stratified}/AllID.txt ${folder}/auction_id.txt ${folder}/item_mapped.txt ${fast_img} ${target_file}/all
