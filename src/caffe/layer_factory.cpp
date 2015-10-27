@@ -235,6 +235,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new MatrixFactorizeLayer<Dtype>(param);
   case LayerParameter_LayerType_MEMORY_DATA:
     return new MemoryDataLayer<Dtype>(param);
+  case LayerParameter_LayerType_MEMORY_MAPPING_DATA:
+    return new MemoryMappingDataLayer<Dtype>(param);
   case LayerParameter_LayerType_MVN:
     return new MVNLayer<Dtype>(param);
   case LayerParameter_LayerType_MULTINOMIAL_LOGISTIC_LOSS:

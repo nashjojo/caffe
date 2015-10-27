@@ -135,6 +135,7 @@ void LabelDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
     string s;
     if (!getline( infile, s ))
       break;
+    CHECK_GE(this->total_size_, line_id+1) << "Label line " << line_id << " exceed maximum label size " << this->total_size_;
     std::istringstream ss( s );
     col_id = 0;
     while (ss) {
