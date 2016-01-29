@@ -583,6 +583,7 @@ message InnerProductParameter {
   optional string dump_weight = 10; // dump the weight as text file
   optional string dump_bias = 11;   // dump the bias as text file
   optional string dump_input = 12;  // dump the input as text file
+  optional string dump_output = 13; // dump the output as text file
 }
 
 // Message that stores parameters used by MatrixFactorizeLayer

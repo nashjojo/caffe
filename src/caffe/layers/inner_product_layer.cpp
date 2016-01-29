@@ -62,14 +62,18 @@ template <typename Dtype>
 void InnerProductLayer<Dtype>::Dump(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
+  const Dtype* top_data = (*top)[1]->cpu_data();
   const Dtype* weight = this->blobs_[0]->cpu_data();
   const Dtype* bias = this->blobs_[1]->cpu_data();
 
-  int num = bottom[0]->num();
-  int dim = bottom[0]->count()/num;
+  int num_input = bottom[0]->num();
+  int dim_input = bottom[0]->count()/num_input;
+  int num_output = (*top)[0]->num();
+  int dim_output = (*top)[0]->count()/num_output;
 
   std::ofstream out;
   if (this->layer_param_.inner_product_param().has_dump_weight()) {
+    LOG(INFO) << "Dumping weight " << N_ << " " << K_;
     out.open(this->layer_param_.inner_product_param().dump_weight().c_str(),ios::out);
     for (int i=0; i<N_; i++) {
       for (int j=0; j<K_; j++) {
@@ -81,6 +85,7 @@ void InnerProductLayer<Dtype>::Dump(const vector<Blob<Dtype>*>& bottom,
   }
 
   if (this->layer_param_.inner_product_param().has_dump_bias()) {
+    LOG(INFO) << "Dumping bias " << N_;
     out.open(this->layer_param_.inner_product_param().dump_bias().c_str(),ios::out);
     for (int i=0; i<N_; i++) {
       out << bias[i] << std::endl;
@@ -89,10 +94,24 @@ void InnerProductLayer<Dtype>::Dump(const vector<Blob<Dtype>*>& bottom,
   }
 
   if (this->layer_param_.inner_product_param().has_dump_input()) {
+    LOG(INFO) << "Dumping input " << num_input << " " << dim_input;
     out.open(this->layer_param_.inner_product_param().dump_input().c_str(),ios::out);
-    for (int i=0; i<num; i++) {
-      for (int j=0; j<dim; j++) {
-        out << weight[i*dim + j] << " ";
+    for (int i=0; i<num_input; i++) {
+      for (int j=0; j<dim_input; j++) {
+        out << bottom_data[i*dim_input + j] << " ";
+      }
+      out << std::endl;
+    }
+    out.close();
+  }
+
+  if (this->layer_param_.inner_product_param().has_dump_output()) {
+    LOG(INFO) << "Dumping output " << num_output << " " << dim_output;
+    out.open(this->layer_param_.inner_product_param().dump_output().c_str(),ios::out);
+    for (int i=0; i<num_output; i++) {
+      for (int j=0; j<dim_output; j++) {
+	LOG(INFO) << i << " " << j;
+        out << top_data[i*dim_output + j] << " ";
       }
       out << std::endl;
     }
