@@ -579,6 +579,10 @@ message InnerProductParameter {
   optional bool bias_term = 2 [default = true]; // whether to have bias terms
   optional FillerParameter weight_filler = 3; // The filler for the weight
   optional FillerParameter bias_filler = 4; // The filler for the bias
+
+  optional string dump_weight = 10; // dump the weight as text file
+  optional string dump_bias = 11;   // dump the bias as text file
+  optional string dump_input = 12;  // dump the input as text file
 }
 
 // Message that stores parameters used by MatrixFactorizeLayer

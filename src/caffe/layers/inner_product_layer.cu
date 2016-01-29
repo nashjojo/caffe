@@ -22,6 +22,7 @@ void InnerProductLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
         bias_multiplier_.gpu_data(),
         this->blobs_[1]->gpu_data(), (Dtype)1., top_data);
   }
+  Dump(bottom, top);
 }
 
 template <typename Dtype>

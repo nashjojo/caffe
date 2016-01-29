@@ -1,4 +1,5 @@
 #include <vector>
+#include <fstream>
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
@@ -58,6 +59,48 @@ void InnerProductLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 }
 
 template <typename Dtype>
+void InnerProductLayer<Dtype>::Dump(const vector<Blob<Dtype>*>& bottom,
+    vector<Blob<Dtype>*>* top) {
+  const Dtype* bottom_data = bottom[0]->cpu_data();
+  const Dtype* weight = this->blobs_[0]->cpu_data();
+  const Dtype* bias = this->blobs_[1]->cpu_data();
+
+  int num = bottom[0]->num();
+  int dim = bottom[0]->count()/num;
+
+  std::ofstream out;
+  if (this->layer_param_.inner_product_param().has_dump_weight()) {
+    out.open(this->layer_param_.inner_product_param().dump_weight().c_str(),ios::out);
+    for (int i=0; i<N_; i++) {
+      for (int j=0; j<K_; j++) {
+        out << weight[i*K_ + j] << " ";
+      }
+      out << std::endl;
+    }
+    out.close();
+  }
+
+  if (this->layer_param_.inner_product_param().has_dump_bias()) {
+    out.open(this->layer_param_.inner_product_param().dump_bias().c_str(),ios::out);
+    for (int i=0; i<N_; i++) {
+      out << bias[i] << std::endl;
+    }
+    out.close();
+  }
+
+  if (this->layer_param_.inner_product_param().has_dump_input()) {
+    out.open(this->layer_param_.inner_product_param().dump_input().c_str(),ios::out);
+    for (int i=0; i<num; i++) {
+      for (int j=0; j<dim; j++) {
+        out << weight[i*dim + j] << " ";
+      }
+      out << std::endl;
+    }
+    out.close();
+  }
+}
+
+template <typename Dtype>
 void InnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
@@ -70,6 +113,7 @@ void InnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         bias_multiplier_.cpu_data(),
         this->blobs_[1]->cpu_data(), (Dtype)1., top_data);
   }
+  Dump(bottom, top);
 }
 
 template <typename Dtype>
