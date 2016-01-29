@@ -12,6 +12,8 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
 
+#include <iostream>
+
 namespace caffe {
 
 template <typename Dtype>
@@ -144,6 +146,7 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
 // This function is used to create a thread that prefetches the data.
 template <typename Dtype>
 void DataLayer<Dtype>::InternalThreadEntry() {
+  // std::cout << "DataLayer<Dtype>::InternalThreadEntry()" << std::endl;
   Datum datum;
   CHECK(this->prefetch_data_.count());
   Dtype* top_data = this->prefetch_data_.mutable_cpu_data();
@@ -176,6 +179,7 @@ void DataLayer<Dtype>::InternalThreadEntry() {
 
     if (this->output_labels_) {
       top_label[item_id] = datum.label();
+      // std::cout << "itemid " << item_id << " label " << top_label[item_id] << std::endl;
     }
 
     // go to the next iter

@@ -151,6 +151,7 @@ void LabelDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       mem_label[line_id*this->label_dim_ + col_id] = temp;
       col_id ++;
     }
+    CHECK_EQ(this->label_dim_, col_id) << "Label file dimension " << col_id << " not equal to assigned dimension " << this->label_dim_;
     line_id ++;
     // std::cout << std::endl;
   }

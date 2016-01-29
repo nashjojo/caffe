@@ -22,6 +22,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <iostream>
+
 namespace caffe {
 
 #define HDF5_DATA_DATASET_NAME "data"
@@ -49,9 +51,13 @@ class BaseDataLayer : public Layer<Dtype> {
       vector<Blob<Dtype>*>* top) {}
 
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
-      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {}
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
+    std::cout << "BaseDataLayer: Datalayer backward cpu" << std::endl;
+  }
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {}
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
+    Backward_cpu(top, propagate_down, bottom);
+  }
 
   int datum_channels() const { return datum_channels_; }
   int datum_height() const { return datum_height_; }
@@ -75,6 +81,9 @@ class BaseDataLayer : public Layer<Dtype> {
   int total_size_;
   __gnu_cxx::hash_map<int, int> ID2Idx_; // write once and read many times, use hash_map
   Blob<Dtype> label_set_; // contain the actual label in order
+
+  // reserved for visualization
+  int instance_so_far_;
 };
 
 template <typename Dtype>
@@ -95,6 +104,14 @@ class BasePrefetchingDataLayer :
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
 
+  // for visualization
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
+    Backward_cpu(top, propagate_down, bottom);
+  }
+
   virtual void CreatePrefetchThread();
   virtual void JoinPrefetchThread();
   // The thread's function
@@ -104,6 +121,36 @@ class BasePrefetchingDataLayer :
   Blob<Dtype> prefetch_data_;
   Blob<Dtype> prefetch_label_;
   Blob<Dtype> prefetch_id_;   // for LabelDataLayer
+};
+
+template <typename Dtype>
+class DataLayer : public BasePrefetchingDataLayer<Dtype> {
+ public:
+  explicit DataLayer(const LayerParameter& param)
+      : BasePrefetchingDataLayer<Dtype>(param) {}
+  virtual ~DataLayer();
+  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_DATA;
+  }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }
+  virtual inline int MinTopBlobs() const { return 1; }
+  virtual inline int MaxTopBlobs() const { return 2; }
+
+ protected:
+  virtual void InternalThreadEntry();
+
+  // LEVELDB
+  shared_ptr<leveldb::DB> db_;
+  shared_ptr<leveldb::Iterator> iter_;
+  // LMDB
+  MDB_env* mdb_env_;
+  MDB_dbi mdb_dbi_;
+  MDB_txn* mdb_txn_;
+  MDB_cursor* mdb_cursor_;
+  MDB_val mdb_key_, mdb_value_;
 };
 
 /**
@@ -219,36 +266,6 @@ class LabelDataLayer : public BasePrefetchingLabelDataLayer<Dtype> {
   MDB_cursor* mdb_cursor_;
   MDB_val mdb_key_, mdb_value_;
 }; 
-
-template <typename Dtype>
-class DataLayer : public BasePrefetchingDataLayer<Dtype> {
- public:
-  explicit DataLayer(const LayerParameter& param)
-      : BasePrefetchingDataLayer<Dtype>(param) {}
-  virtual ~DataLayer();
-  virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
-      vector<Blob<Dtype>*>* top);
-
-  virtual inline LayerParameter_LayerType type() const {
-    return LayerParameter_LayerType_DATA;
-  }
-  virtual inline int ExactNumBottomBlobs() const { return 0; }
-  virtual inline int MinTopBlobs() const { return 1; }
-  virtual inline int MaxTopBlobs() const { return 2; }
-
- protected:
-  virtual void InternalThreadEntry();
-
-  // LEVELDB
-  shared_ptr<leveldb::DB> db_;
-  shared_ptr<leveldb::Iterator> iter_;
-  // LMDB
-  MDB_env* mdb_env_;
-  MDB_dbi mdb_dbi_;
-  MDB_txn* mdb_txn_;
-  MDB_cursor* mdb_cursor_;
-  MDB_val mdb_key_, mdb_value_;
-};
 
 /**
  * @brief Map bottom ID to memory and output mapped data.

@@ -211,6 +211,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new DumpColumnLayer<Dtype>(param);
   case LayerParameter_LayerType_EUCLIDEAN_LOSS:
     return new EuclideanLossLayer<Dtype>(param);
+  case LayerParameter_LayerType_EUCLIDEAN_FIXED_LOSS:
+    return new EuclideanWithFixedLossLayer<Dtype>(param);
   case LayerParameter_LayerType_ELTWISE:
     return new EltwiseLayer<Dtype>(param);
   case LayerParameter_LayerType_FLATTEN:
@@ -263,6 +265,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return GetSoftmaxLayer<Dtype>(name, param);
   case LayerParameter_LayerType_SOFTMAX_LOSS:
     return new SoftmaxWithLossLayer<Dtype>(param);
+  case LayerParameter_LayerType_SOFTMAX_FIXED_LOSS:
+    return new SoftmaxWithFixedLossLayer<Dtype>(param);
   case LayerParameter_LayerType_SPLIT:
     return new SplitLayer<Dtype>(param);
   case LayerParameter_LayerType_TANH:

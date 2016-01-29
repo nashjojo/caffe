@@ -280,6 +280,8 @@ message LayerParameter {
     LABEL_DATA = 56; // LabelDataLayer
     DUMP_COL = 57; // DumpColumnLayer
     MEMORY_MAPPING_DATA = 58; // MemoryMappingDataLayer
+    SOFTMAX_FIXED_LOSS = 59; // SoftmaxWithFixedLossLayer
+    EUCLIDEAN_FIXED_LOSS = 60; // EuclideanWithFixedLossLayer
   }
   optional LayerType type = 5; // the layer type from the enum above
 
@@ -465,6 +467,10 @@ message DataParameter {
   optional uint32 label_dim = 22;
   // Total number of distinct label
   optional uint32 total_size = 23;
+
+  // Dumping path for data visualization
+  optional string data_dump = 50;
+  optional uint32 visualize = 51 [default = 0];
 }
 
 // Message that stores parameters used by DropoutLayer
@@ -710,6 +716,7 @@ message SoftmaxParameter {
     CUDNN = 2;
   }
   optional Engine engine = 1 [default = DEFAULT];
+  optional int32 fixed_label = 10 [default = -1]; 
 }
 
 // Message that stores parameters used by SigmoidLayer
